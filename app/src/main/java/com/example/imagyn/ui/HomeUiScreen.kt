@@ -2,14 +2,15 @@ package com.example.imagyn.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,7 +28,7 @@ import com.example.imagyn.ui.theme.WhiteColor
 
 @Composable
 fun ChapterCardUi(
-    content: String = "What is Operating System and its types",
+    content: String,
     onClick: () -> Unit,
     cardColorValue: Long = 0xFF248190,
     textColorValue: Long = 0xFFFFFFFF,
@@ -70,37 +71,59 @@ fun ChapterCardUi(
 
 @Composable
 fun SubjectCardUi(content: String, onClick: () -> Unit) {
-    Box() {
+    Box(contentAlignment = Alignment.TopEnd) {
         ChapterCardUi(content = content, onClick = onClick)
-        Surface(
-            modifier = Modifier.align(Alignment.TopEnd)
-        ) {
-            Text(text = "")
-            Spacer(modifier = Modifier.width(2.dp))
+        Row {
+            Card(
+                colors = CardColors(
+                    contentColor = WhiteColor,
+                    containerColor = WhiteColor,
+                    disabledContentColor = WhiteColor,
+                    disabledContainerColor = WhiteColor
+                ),
+                shape = RoundedCornerShape(1.dp),
+                modifier = Modifier
+                    .height(18.dp)
+                    .width(12.dp)
+            ) {
+                Text(text = "  ") //2Spaces
+            }
+            Spacer(modifier = Modifier.width(12.dp))
         }
     }
 }
 
 @Composable
-fun FlipCardUi(content: String = "What is Operating System ?", cardColorValue: Long = 0xFF248190, onClick: () -> Unit) {
+fun FlipCardUi(content: String, cardColorValue: Long, onClick: () -> Unit) {
     ChapterCardUi(
         content = content,
         cardWidth = 234.dp,
         cardHeight = 340.dp,
         onClick = onClick,
         cardColorValue = cardColorValue,
-        textColorValue = 0xFF1E1E1E,
+        textColorValue = 0xFF000000,
     )
 }
 
 @Preview
 @Composable
+fun SubjectCardUiPreview() {
+    ImagynTheme {
+        SubjectCardUi(content = "What is Operating System ?") {}
+    }
+}
+@Preview
+@Composable
 fun FlipCardUiPreview() {
     ImagynTheme {
-        //ChapterCardUi(onClick = {})
-        //FlipCardUi(onClick = {})
-        SubjectCardUi(content = "What is Operating System ?") {
-            
-        }
+        FlipCardUi(content = "What is Operating System ?", cardColorValue = 0xFF90D24, onClick = {})
+    }
+}
+
+@Preview
+@Composable
+fun ChapterCardPreview() {
+    ImagynTheme {
+        ChapterCardUi(content = "What is Operating System ?", onClick = {})
     }
 }
