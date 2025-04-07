@@ -1,2 +1,0 @@
-# Imagyn
-Flip Cards App
