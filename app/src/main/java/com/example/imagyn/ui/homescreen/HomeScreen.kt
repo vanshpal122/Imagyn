@@ -1,6 +1,7 @@
 package com.example.imagyn.ui.homescreen
 
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -17,7 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -69,18 +70,18 @@ import com.example.imagyn.ui.theme.ImagynTheme
 
 @Composable
 fun MainAppScreen(
+    modifier: Modifier = Modifier,
     homeScreenViewModel: HomeScreenViewModel = viewModel(factory = AppViewModelProvider.Factory),
     onChapterCardClick: (Int) -> Unit,
     onSubjectCardClick: (Int, String) -> Unit,
     onAddCardsClick: (String) -> Unit,
-    modifier: Modifier = Modifier
 ) {
-    val chapterList by homeScreenViewModel.chapterMapFlow.collectAsState()
-    val subjectList by homeScreenViewModel.subjectMapFlow.collectAsState()
-
+    val chapterList by homeScreenViewModel.chapterFlow.collectAsState()
+    val subjectList by homeScreenViewModel.subjectFlow.collectAsState()
     var numberOfSubjectSelected by rememberSaveable {
         mutableIntStateOf(0)
     }
+
     MainAppScreenUI(
         chapterList = chapterList,
         subjectList = subjectList,
@@ -95,16 +96,16 @@ fun MainAppScreen(
         },
         deleteSelectedSubjectsAndChapters = { homeScreenViewModel.deleteSelectedSubjectsAndChapters() },
         createSubject = { homeScreenViewModel.createSubject(it) },
-        updateSubjectSelectedList = { subjectData, b, updateSelection ->
+        updateSubjectSelectedList = { index, b, updateSelection ->
             homeScreenViewModel.updateSelectedSubject(
-                subjectData = subjectData,
+                index = index,
                 isSelected = b,
                 updateSelectionNumber = updateSelection
             )
         },
-        updateChapterSelectedList = { chapterData, b, updateSelection ->
+        updateChapterSelectedList = { index, b, updateSelection ->
             homeScreenViewModel.updateSelectedChapter(
-                chapterData = chapterData,
+                index = index,
                 isSelected = b,
                 updateSelectionNumber = updateSelection
             )
@@ -120,34 +121,41 @@ fun MainAppScreen(
         title = "Imagyn",
         numberOfSubjectSelected = numberOfSubjectSelected,
         incrementSubjectSelected = { numberOfSubjectSelected++ },
-        decrementSubjectSelected = { numberOfSubjectSelected-- }
+        decrementSubjectSelected = { numberOfSubjectSelected-- },
+        updateSelectionNumber = homeScreenViewModel::updateNumberOfSelection,
+        getChapterToggleStatus = { index -> homeScreenViewModel.getCurrentToggleStatusChapter(index) },
+        getSubjectToggleStatus = { index -> homeScreenViewModel.getCurrentToggleStatusSubject(index) }
     )
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun MainAppScreenUI(
-    chapterList: Map<ChapterData, Boolean>,
-    subjectList: Map<SubjectData, Boolean>,
+    chapterList: List<ChapterHomeItem>,
+    subjectList: List<SubjectHomeItem>,
     modifier: Modifier = Modifier,
     onAddChapterClick: (String) -> Unit,
     onChapterCardClick: (Int) -> Unit,
     onSubjectCardClick: (Int, String) -> Unit,
     deleteSelectedSubjectsAndChapters: (Int) -> Unit,
     createSubject: (String) -> Unit,
-    updateSubjectSelectedList: (SubjectData, Boolean, () -> Unit) -> Unit,
-    updateChapterSelectedList: (ChapterData, Boolean, () -> Unit) -> Unit,
+    updateSubjectSelectedList: (Int, Boolean, () -> Unit) -> Unit,
+    updateChapterSelectedList: (Int, Boolean, () -> Unit) -> Unit,
     selectAll: (Boolean, () -> Unit) -> Unit,
     isMainScreen: Boolean,
     onNavigateBack: () -> Unit,
     title: String,
     numberOfSubjectSelected: Int,
     incrementSubjectSelected: () -> Unit,
-    decrementSubjectSelected: () -> Unit
+    decrementSubjectSelected: () -> Unit,
+    updateSelectionNumber: () -> Int,
+    getChapterToggleStatus: (Int) -> Boolean,
+    getSubjectToggleStatus: (Int) -> Boolean
 ) {
     var isDropDown by rememberSaveable {
         mutableStateOf(false)
     }
+
     var isChapterAlertBoxShown by rememberSaveable {
         mutableStateOf(false)
     }
@@ -164,6 +172,10 @@ fun MainAppScreenUI(
         mutableStateOf(false)
     }
 
+    BackHandler(enabled = selectableState) {
+        selectableState = false
+        selectAll(false) { numberOfSelection = updateSelectionNumber() }
+    }
 
     Scaffold(
         topBar = {
@@ -220,7 +232,7 @@ fun MainAppScreenUI(
                     actions = {
                         TextButton(onClick = {
                             selectableState = false
-                            selectAll(false) { numberOfSelection = 0 }
+                            selectAll(false) { numberOfSelection = updateSelectionNumber() }
                         }) {
                             Text(text = "Cancel")
                         }
@@ -230,7 +242,7 @@ fun MainAppScreenUI(
                             onClick = {
                                 deleteSelectedSubjectsAndChapters(numberOfSelection)
                                 selectableState = false
-                                selectAll(false) { numberOfSelection = 0 }
+                                selectAll(false) { numberOfSelection = updateSelectionNumber() }
                             },
                             enabled = numberOfSelection > 0
                         ) {
@@ -264,10 +276,12 @@ fun MainAppScreenUI(
                                 modifier = Modifier.clickable {
                                     if (numberOfSelection < (chapterList.size + subjectList.size)) {
                                         selectAll(true) {
-                                            numberOfSelection = chapterList.size + subjectList.size
+                                            numberOfSelection = updateSelectionNumber()
                                         }
                                     } else {
-                                        selectAll(false) { numberOfSelection = 0 }
+                                        selectAll(false) {
+                                            numberOfSelection = updateSelectionNumber()
+                                        }
                                     }
                                 }
                             ) {
@@ -339,30 +353,33 @@ fun MainAppScreenUI(
                     )
                     .fillMaxSize()
             ) {
-                items(subjectList.keys.toList()) { subject ->
+                itemsIndexed(
+                    subjectList,
+                    key = { _, subject -> subject.subjectData.subjectID }) { index, subject ->
                     Box(
                         modifier = Modifier
                             .wrapContentSize()
                     ) {
-                        if (subject.subject != null) {
+                        subject.subjectData.subject?.let {
                             SubjectCardUi(
-                                content = subject.subject,
+                                content = it,
                                 modifier = Modifier.pointerInput(Unit) {
                                     detectTapGestures(
                                         onTap = {
                                             if (!selectableState) {
-                                                onSubjectCardClick(subject.subjectID, subject.subject)
+                                                onSubjectCardClick(
+                                                    subject.subjectData.subjectID,
+                                                    subject.subjectData.subject
+                                                )
                                             } else {
-                                                val toggleState = subjectList[subject]
                                                 updateSubjectSelectedList(
-                                                    subject,
-                                                    !(toggleState!!)
+                                                    index,
+                                                    !getSubjectToggleStatus(index)
                                                 ) {
-                                                    if (toggleState) {
-                                                        numberOfSelection--
-                                                        decrementSubjectSelected()
+                                                    if (subject.isSelected) {
+                                                        numberOfSelection = updateSelectionNumber()
                                                     } else {
-                                                        numberOfSelection++
+                                                        numberOfSelection = updateSelectionNumber()
                                                         incrementSubjectSelected()
                                                     }
                                                 }
@@ -370,16 +387,15 @@ fun MainAppScreenUI(
                                         },
                                         onLongPress = {
                                             selectableState = true
-                                            val toggleState = subjectList[subject]
                                             updateSubjectSelectedList(
-                                                subject,
-                                                !(toggleState!!)
+                                                index,
+                                                !getSubjectToggleStatus(index)
                                             ) {
-                                                if (toggleState) {
-                                                    numberOfSelection--
+                                                if (subject.isSelected) {
+                                                    numberOfSelection = updateSelectionNumber()
                                                     decrementSubjectSelected()
                                                 } else {
-                                                    numberOfSelection++
+                                                    numberOfSelection = updateSelectionNumber()
                                                     incrementSubjectSelected()
                                                 }
                                             }
@@ -387,77 +403,72 @@ fun MainAppScreenUI(
                                     )
                                 }
                             )
-                            if (selectableState) {
-                                subjectList[subject]?.let {
-                                    Checkbox(
-                                        checked = it,
-                                        onCheckedChange = { select ->
-                                            updateSubjectSelectedList(
-                                                subject,
-                                                select
-                                            ) {
-                                                if (select) {
-                                                    numberOfSelection++
-                                                    incrementSubjectSelected()
-                                                } else {
-                                                    numberOfSelection--
-                                                    decrementSubjectSelected()
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.align(
-                                            Alignment.TopEnd
-                                        )
-                                    )
-                                }
-                            }
+                        }
+                        if (selectableState) {
+                            Checkbox(
+                                checked = subject.isSelected,
+                                onCheckedChange = { select ->
+                                    updateSubjectSelectedList(
+                                        index,
+                                        select
+                                    ) {
+                                        if (select) {
+                                            incrementSubjectSelected()
+                                        } else {
+                                            decrementSubjectSelected()
+                                        }
+                                        numberOfSelection = updateSelectionNumber()
+                                    }
+                                },
+                                modifier = Modifier.align(
+                                    Alignment.TopEnd
+                                )
+                            )
                         }
 
                     }
                 }
-                items(chapterList.keys.toList()) { chapter ->
+                itemsIndexed(
+                    chapterList,
+                    key = { _, chapter -> chapter.chapter.chapterID }) { index, chapter ->
                     Box(modifier = Modifier.wrapContentSize()) {
                         ChapterCardUi(
-                            content = chapter.chapter,
+                            content = chapter.chapter.chapter,
                             modifier = Modifier.pointerInput(Unit) {
-                                detectTapGestures (
+                                detectTapGestures(
                                     onTap = {
                                         if (!selectableState) {
-                                            onChapterCardClick(chapter.chapterID)
+                                            onChapterCardClick(chapter.chapter.chapterID)
                                         } else {
-                                            val currentToggle = chapterList[chapter]
                                             updateChapterSelectedList(
-                                                chapter,
-                                                !(currentToggle)!!
-                                            ) { if (currentToggle) numberOfSelection-- else numberOfSelection++ }
+                                                index,
+                                                !getChapterToggleStatus(index)
+                                            ) { numberOfSelection = updateSelectionNumber() }
                                         }
                                     },
                                     onLongPress = {
                                         selectableState = true
-                                        val currentToggle = chapterList[chapter]
                                         updateChapterSelectedList(
-                                            chapter,
-                                            !(currentToggle)!!
-                                        ) { if (currentToggle) numberOfSelection-- else numberOfSelection++ }
+                                            index,
+                                            !getChapterToggleStatus(index)
+                                        ) { numberOfSelection = updateSelectionNumber() }
                                     }
                                 )
                             },
                         )
                         if (selectableState) {
-                            chapterList[chapter]?.let {
-                                Checkbox(
-                                    checked = it,
-                                    onCheckedChange = { select ->
-                                        updateChapterSelectedList(
-                                            chapter,
-                                            select
-                                        ) { if (select) numberOfSelection++ else numberOfSelection-- }
-                                    },
-                                    modifier = Modifier.align(
-                                        Alignment.TopEnd
-                                    )
+                            Checkbox(
+                                checked = chapter.isSelected,
+                                onCheckedChange = { select ->
+                                    updateChapterSelectedList(
+                                        index,
+                                        select
+                                    ) { numberOfSelection = updateSelectionNumber() }
+                                },
+                                modifier = Modifier.align(
+                                    Alignment.TopEnd
                                 )
-                            }
+                            )
                         }
                     }
                 }
@@ -613,14 +624,14 @@ fun CustomiseAlertDialogBox(
 fun MainAppScreenPreview() {
     ImagynTheme {
         MainAppScreenUI(
-            chapterList = mapOf(
-                ChapterData(0, chapter = "HELLO", subjectID = null) to false,
-                ChapterData(1, chapter = "HELLO", subjectID = null) to false,
-                ChapterData(2, chapter = "HELLO", subjectID = null) to false
+            chapterList = listOf(
+                ChapterHomeItem(ChapterData(0, chapter = "HELLO1", subjectID = null), false),
+                ChapterHomeItem(ChapterData(1, chapter = "HELLO2", subjectID = null), false),
+                ChapterHomeItem(ChapterData(2, chapter = "HELLO3", subjectID = null), false),
             ),
-            subjectList = mapOf(
-                SubjectData(3, subject = "OS") to false,
-                SubjectData(4, subject = "OS") to false
+            subjectList = listOf(
+                SubjectHomeItem(SubjectData(3, subject = "OS"), false),
+                SubjectHomeItem(SubjectData(4, subject = "OS"), false)
             ),
             onAddChapterClick = {},
             onChapterCardClick = {},
@@ -635,7 +646,10 @@ fun MainAppScreenPreview() {
             title = "Imagyn",
             numberOfSubjectSelected = 0,
             incrementSubjectSelected = {},
-            decrementSubjectSelected = {}
+            decrementSubjectSelected = {},
+            updateSelectionNumber = { 0 },
+            getChapterToggleStatus = { false },
+            getSubjectToggleStatus = { false }
         )
     }
 }

@@ -4,34 +4,42 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.imagyn.data.ImagynRepository
-import com.example.imagyn.data.database.ChapterData
 import com.example.imagyn.data.database.SubjectData
+import com.example.imagyn.ui.homescreen.ChapterHomeItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynRepository) : ViewModel() {
-    private val _chapterMapFlow = MutableStateFlow(emptyMap<ChapterData, Boolean>())
-    val chapterMapFlow = _chapterMapFlow.asStateFlow()
+    private val _chapterFlow = MutableStateFlow(emptyList<ChapterHomeItem>())
+    val chapterFlow = _chapterFlow.asStateFlow()
 
     fun getChapterFlow(subjectID: Int) {
         viewModelScope.launch {
             imagynRepository.getChaptersOfSubject(subjectID)
                 .map { list ->
-                    list.associateWith { false }
+                    list.map { ChapterHomeItem(it, false) }
                 }
                 .collect {
-                    _chapterMapFlow.value = it
+                    _chapterFlow.value = it
                 }
         }
+    }
+
+    fun updateNumberOfSelection(): Int {
+        var count = 0
+        chapterFlow.value.forEach {
+            if (it.isSelected) count++
+        }
+        return count
     }
 
 
     fun selectAll(isSelected: Boolean, updateSelection: () -> Unit) {
         viewModelScope.launch {
-            chapterMapFlow.value.forEach { chapter ->
-                updateSelectedChapter(chapter.key, isSelected, updateSelection)
+            chapterFlow.value.forEachIndexed { index, _ ->
+                updateSelectedChapter(index, isSelected, updateSelection)
             }
         }
     }
@@ -44,7 +52,7 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
     ) {
         viewModelScope.launch {
             try {
-                if (numberOfSelection == chapterMapFlow.value.size) {
+                if (numberOfSelection == chapterFlow.value.size) {
                     imagynRepository.deleteSubject(
                         SubjectData(
                             subjectID, subjectName
@@ -52,8 +60,8 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
                     )
                     onSubjectDelete()
                 } else {
-                    chapterMapFlow.value.filter { it.value }.forEach { chapter ->
-                        imagynRepository.deleteChapter(chapter.key)
+                    chapterFlow.value.filter { it.isSelected }.forEach { chapter ->
+                        imagynRepository.deleteChapter(chapter.chapter)
                     }
                 }
             } catch (e: Exception) {
@@ -62,13 +70,18 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
         }
     }
 
+    fun getCurrentToggleStatusChapter(index: Int): Boolean {
+        return this.chapterFlow.value[index].isSelected
+    }
+
     fun updateSelectedChapter(
-        chapterData: ChapterData,
+        index: Int,
         isSelected: Boolean,
-        updateSelection: () -> Unit
+        updateSelectionNumber: () -> Unit
     ) {
-        _chapterMapFlow.value =
-            _chapterMapFlow.value.toMutableMap().apply { this[chapterData] = isSelected }
-        updateSelection()
+        _chapterFlow.value =
+            _chapterFlow.value.toMutableList()
+                .apply { this[index] = this[index].copy(isSelected = isSelected) }
+        updateSelectionNumber()
     }
 }

@@ -17,60 +17,82 @@ import kotlinx.coroutines.launch
 
 class HomeScreenViewModel(private val imagynRepository: ImagynRepository) : ViewModel() {
 
-    private val _subjectMapFlow = MutableStateFlow(emptyMap<SubjectData, Boolean>())
-    private val _chapterMapFlow = MutableStateFlow(emptyMap<ChapterData, Boolean>())
-    val subjectMapFlow = _subjectMapFlow.asStateFlow()
-    val chapterMapFlow = _chapterMapFlow.asStateFlow()
+    private val _subjectFlow = MutableStateFlow(emptyList<SubjectHomeItem>())
+    private val _chapterFlow = MutableStateFlow(emptyList<ChapterHomeItem>())
+    val subjectFlow = _subjectFlow.asStateFlow()
+    val chapterFlow = _chapterFlow.asStateFlow()
+
+    fun updateNumberOfSelection(): Int {
+        var count = 0
+        chapterFlow.value.forEach {
+            if (it.isSelected) count++
+        }
+        subjectFlow.value.forEach {
+            if (it.isSelected) count++
+        }
+        return count
+    }
+
+    fun getCurrentToggleStatusChapter(index: Int): Boolean {
+        return this.chapterFlow.value[index].isSelected
+    }
+
+    fun getCurrentToggleStatusSubject(index: Int): Boolean {
+        return this.subjectFlow.value[index].isSelected
+    }
 
     init {
         viewModelScope.launch {
             imagynRepository.getAllSubjects().map { list ->
-                list.associateWith { false }
+                list.map { SubjectHomeItem(it, false) }
             }
                 .collect {
-                    _subjectMapFlow.value = it
+                    _subjectFlow.value = it
                 }
         }
         viewModelScope.launch {
             imagynRepository.getAllChapters().map { list ->
-                list.filter { it.subjectID == null }.associateWith { false }
+                list.filter { it.subjectID == null }.map { ChapterHomeItem(it, false) }
             }
                 .collect {
-                    _chapterMapFlow.value = it
+                    _chapterFlow.value = it
                 }
         }
     }
 
     fun selectAll(isSelected: Boolean, updateSelectionNumber: () -> Unit) {
         viewModelScope.launch {
-            chapterMapFlow.value.forEach { chapter ->
-                updateSelectedChapter(chapter.key, isSelected, updateSelectionNumber)
+            chapterFlow.value.forEachIndexed { index, _ ->
+                updateSelectedChapter(index, isSelected, updateSelectionNumber)
             }
         }
         viewModelScope.launch {
-            subjectMapFlow.value.forEach { subject ->
-                updateSelectedSubject(subject.key, isSelected, updateSelectionNumber)
+            subjectFlow.value.forEachIndexed { index, _ ->
+                updateSelectedSubject(index, isSelected, updateSelectionNumber)
             }
         }
     }
 
     fun updateSelectedChapter(
-        chapterData: ChapterData,
+        index: Int,
         isSelected: Boolean,
         updateSelectionNumber: () -> Unit
     ) {
-        _chapterMapFlow.value =
-            _chapterMapFlow.value.toMutableMap().apply { this[chapterData] = isSelected }
+        _chapterFlow.value =
+            _chapterFlow.value.toMutableList()
+                .apply { this[index] = this[index].copy(isSelected = isSelected) }
+        Log.d("VANSH2", _chapterFlow.value[index].isSelected.toString())
         updateSelectionNumber()
     }
 
     fun updateSelectedSubject(
-        subjectData: SubjectData,
+        index: Int,
         isSelected: Boolean,
         updateSelectionNumber: () -> Unit
     ) {
-        _subjectMapFlow.value =
-            _subjectMapFlow.value.toMutableMap().apply { this[subjectData] = isSelected }
+        _subjectFlow.value =
+            _subjectFlow.value.toMutableList()
+                .apply { this[index] = this[index].copy(isSelected = isSelected) }
         updateSelectionNumber()
     }
 
@@ -78,14 +100,14 @@ class HomeScreenViewModel(private val imagynRepository: ImagynRepository) : View
         viewModelScope.launch {
             try {
                 val deleteJobs = mutableListOf<Deferred<Unit>>()
-                deleteJobs.addAll(subjectMapFlow.value.filter { it.value }.map { subject ->
+                deleteJobs.addAll(subjectFlow.value.filter { it.isSelected }.map { subject ->
                     async(Dispatchers.IO) {
-                        imagynRepository.deleteSubject(subject.key)
+                        imagynRepository.deleteSubject(subject.subjectData)
                     }
                 })
-                deleteJobs.addAll(chapterMapFlow.value.filter { it.value }.map { chapter ->
+                deleteJobs.addAll(chapterFlow.value.filter { it.isSelected }.map { chapter ->
                     async(Dispatchers.IO) {
-                        imagynRepository.deleteChapter(chapter.key)
+                        imagynRepository.deleteChapter(chapter.chapter)
                     }
                 })
                 deleteJobs.awaitAll()
@@ -100,13 +122,13 @@ class HomeScreenViewModel(private val imagynRepository: ImagynRepository) : View
         viewModelScope.launch {
             try {
                 val subjectID = imagynRepository.insertSubject(SubjectData(subject = subjectName))
-                val updateJobs = chapterMapFlow.value.filter { it.value }.map { chapter ->
+                val updateJobs = chapterFlow.value.filter { it.isSelected }.map { chapter ->
                     async(Dispatchers.IO) {
                         imagynRepository.updateCardSubject(
-                            chapterID = chapter.key.chapterID,
+                            chapterID = chapter.chapter.chapterID,
                             subjectID = subjectID.toInt()
                         )
-                        imagynRepository.updateChapter(chapter.key.copy(subjectID = subjectID.toInt()))
+                        imagynRepository.updateChapter(chapter.chapter.copy(subjectID = subjectID.toInt()))
                     }
                 }
                 updateJobs.awaitAll()
@@ -115,5 +137,14 @@ class HomeScreenViewModel(private val imagynRepository: ImagynRepository) : View
             }
         }
     }
-
 }
+
+data class ChapterHomeItem(
+    val chapter: ChapterData,
+    val isSelected: Boolean,
+)
+
+data class SubjectHomeItem(
+    val subjectData: SubjectData,
+    val isSelected: Boolean
+)

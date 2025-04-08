@@ -21,11 +21,11 @@ fun SubjectChaptersScreen(
     LaunchedEffect(subjectID) {
         subjectScreenViewModel.getChapterFlow(subjectID)
     }
-    val chaptersList by subjectScreenViewModel.chapterMapFlow.collectAsState()
+    val chaptersList by subjectScreenViewModel.chapterFlow.collectAsState()
 
     MainAppScreenUI(
         chapterList = chaptersList,
-        subjectList = emptyMap(),
+        subjectList = emptyList(),
         onAddChapterClick = {},
         onChapterCardClick = onChapterCardClick,
         onSubjectCardClick = { _, _ -> },
@@ -39,9 +39,9 @@ fun SubjectChaptersScreen(
         },
         createSubject = {},
         updateSubjectSelectedList = { _, _, _ -> },
-        updateChapterSelectedList = { chapterData, b, updateSelection ->
+        updateChapterSelectedList = { index, b, updateSelection ->
             subjectScreenViewModel.updateSelectedChapter(
-                chapterData,
+                index,
                 b,
                 updateSelection
             )
@@ -57,6 +57,13 @@ fun SubjectChaptersScreen(
         title = subjectName,
         numberOfSubjectSelected = 0,
         incrementSubjectSelected = {},
-        decrementSubjectSelected = {}
+        decrementSubjectSelected = {},
+        updateSelectionNumber = subjectScreenViewModel::updateNumberOfSelection,
+        getChapterToggleStatus = { index ->
+            subjectScreenViewModel.getCurrentToggleStatusChapter(
+                index
+            )
+        },
+        getSubjectToggleStatus = { false }
     )
 }

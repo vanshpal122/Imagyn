@@ -146,7 +146,7 @@ fun FlipCardPlayScreenUI(
                         }
                         .graphicsLayer { this.rotationY = rotationValue }
                         .then(
-                            if (isBlurred) Modifier.blur(2.dp) else Modifier
+                            if (isBlurred) Modifier.blur(6.dp) else Modifier
                         )
                         .sharedElement(
                             rememberSharedContentState(key = flipCard.cardId),

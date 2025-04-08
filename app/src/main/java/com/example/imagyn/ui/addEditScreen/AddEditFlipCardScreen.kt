@@ -78,9 +78,14 @@ fun AddEditFlipCardScreen(
     var isFront by rememberSaveable {
         mutableStateOf(true)
     }
-    var isEditing by rememberSaveable {
+    var isFrontEditing by rememberSaveable {
         mutableStateOf(true)
     }
+
+    var isBackEditing by rememberSaveable {
+        mutableStateOf(true)
+    }
+
     val rotationValue by animateFloatAsState(
         targetValue = if (!isFront) 0f else 360f,
         label = "rotation"
@@ -128,7 +133,7 @@ fun AddEditFlipCardScreen(
             ) {
                 IconButton(onClick = {
                     isFront = true
-                    isEditing = false
+                    isBackEditing = false
                 }) {
                     if (!isFront) Icon(
                         painter = painterResource(id = R.drawable.flip),
@@ -138,15 +143,19 @@ fun AddEditFlipCardScreen(
                 }
                 Box(modifier = Modifier, contentAlignment = Alignment.TopCenter) {
                     FlipCardUi(
-                        content = if (isFront && !isEditing) frontText else if (!isFront && !isEditing) backText else "",
+                        content = if (isFront && !isFrontEditing) frontText else if (!isFront && !isBackEditing) backText else "",
                         cardColorValue = colorValue,
-                        modifier = Modifier.clickable { isEditing = !isEditing }
+                        modifier = Modifier
+                            .clickable {
+                                if (isFront) isFrontEditing = !isFrontEditing else isBackEditing =
+                                    !isBackEditing
+                            }
                             .graphicsLayer {
                                 this.rotationY = rotationValue
                             }
                             .padding(start = 16.dp, end = 16.dp)
                     )
-                    if (isEditing) {
+                    if ((isFront && isFrontEditing) || (!isFront && isBackEditing)) {
                         ResizableDraggableTextField(
                             textValue = if (isFront) frontText else backText,
                             onChangeTextValue = {
@@ -160,7 +169,7 @@ fun AddEditFlipCardScreen(
                 }
                 IconButton(onClick = {
                     isFront = false
-                    isEditing = false
+                    isFrontEditing = false
                 }) {
                     if (isFront) Icon(
                         painter = painterResource(id = R.drawable.flip),
@@ -264,7 +273,7 @@ fun Modifier.borderDotted(width: Dp, color: Color): Modifier = this.then(
 fun AddEditFlipCardScreenPreview() {
     ImagynTheme {
         AddEditFlipCardScreen(
-            onSaveButtonClick = { front, back -> {} },
+            onSaveButtonClick = { _, _ -> {} },
             onCancelButtonClick = {},
             colorValue = 0xFF248190,
             frontText = "",
