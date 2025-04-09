@@ -16,8 +16,8 @@ import com.example.imagyn.ui.theme.ImagynTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         installSplashScreen()
+        enableEdgeToEdge()
         setContent {
             ImagynTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->

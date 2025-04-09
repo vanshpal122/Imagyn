@@ -2,4 +2,12 @@
 <resources>
 
     <style name="Theme.Imagyn" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/app_color</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/imagyn_avd</item>
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <item name="postSplashScreenTheme">@style/Theme.Imagyn</item>
+    </style>
+
 </resources>
