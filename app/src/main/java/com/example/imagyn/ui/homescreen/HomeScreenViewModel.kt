@@ -33,6 +33,14 @@ class HomeScreenViewModel(private val imagynRepository: ImagynRepository) : View
         return count
     }
 
+    fun getNumberOfSubjectSelection(): Int {
+        var count = 0;
+        subjectFlow.value.forEach {
+            if (it.isSelected) count++
+        }
+        return count;
+    }
+
     fun getCurrentToggleStatusChapter(index: Int): Boolean {
         return this.chapterFlow.value[index].isSelected
     }
@@ -81,7 +89,6 @@ class HomeScreenViewModel(private val imagynRepository: ImagynRepository) : View
         _chapterFlow.value =
             _chapterFlow.value.toMutableList()
                 .apply { this[index] = this[index].copy(isSelected = isSelected) }
-        Log.d("VANSH2", _chapterFlow.value[index].isSelected.toString())
         updateSelectionNumber()
     }
 

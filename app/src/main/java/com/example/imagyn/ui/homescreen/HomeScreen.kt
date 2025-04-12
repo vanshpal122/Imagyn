@@ -119,12 +119,13 @@ fun MainAppScreen(
         isMainScreen = true,
         onNavigateBack = {},
         title = "Imagyn",
-        numberOfSubjectSelected = numberOfSubjectSelected,
-        incrementSubjectSelected = { numberOfSubjectSelected++ },
-        decrementSubjectSelected = { numberOfSubjectSelected-- },
+        updateNumberOfSubjectSelected = {
+            numberOfSubjectSelected = homeScreenViewModel.getNumberOfSubjectSelection()
+        },
         updateSelectionNumber = homeScreenViewModel::updateNumberOfSelection,
         getChapterToggleStatus = { index -> homeScreenViewModel.getCurrentToggleStatusChapter(index) },
-        getSubjectToggleStatus = { index -> homeScreenViewModel.getCurrentToggleStatusSubject(index) }
+        getSubjectToggleStatus = { index -> homeScreenViewModel.getCurrentToggleStatusSubject(index) },
+        numberOfSubjectSelected = numberOfSubjectSelected
     )
 }
 
@@ -145,12 +146,11 @@ fun MainAppScreenUI(
     isMainScreen: Boolean,
     onNavigateBack: () -> Unit,
     title: String,
-    numberOfSubjectSelected: Int,
-    incrementSubjectSelected: () -> Unit,
-    decrementSubjectSelected: () -> Unit,
+    updateNumberOfSubjectSelected: () -> Unit,
     updateSelectionNumber: () -> Int,
     getChapterToggleStatus: (Int) -> Boolean,
-    getSubjectToggleStatus: (Int) -> Boolean
+    getSubjectToggleStatus: (Int) -> Boolean,
+    numberOfSubjectSelected: Int
 ) {
     var isDropDown by rememberSaveable {
         mutableStateOf(false)
@@ -232,7 +232,10 @@ fun MainAppScreenUI(
                     actions = {
                         TextButton(onClick = {
                             selectableState = false
-                            selectAll(false) { numberOfSelection = updateSelectionNumber() }
+                            selectAll(false) {
+                                numberOfSelection = updateSelectionNumber()
+                                updateNumberOfSubjectSelected()
+                            }
                         }) {
                             Text(text = "Cancel")
                         }
@@ -242,7 +245,10 @@ fun MainAppScreenUI(
                             onClick = {
                                 deleteSelectedSubjectsAndChapters(numberOfSelection)
                                 selectableState = false
-                                selectAll(false) { numberOfSelection = updateSelectionNumber() }
+                                selectAll(false) {
+                                    numberOfSelection = updateSelectionNumber()
+                                    updateNumberOfSubjectSelected()
+                                }
                             },
                             enabled = numberOfSelection > 0
                         ) {
@@ -277,10 +283,12 @@ fun MainAppScreenUI(
                                     if (numberOfSelection < (chapterList.size + subjectList.size)) {
                                         selectAll(true) {
                                             numberOfSelection = updateSelectionNumber()
+                                            updateNumberOfSubjectSelected()
                                         }
                                     } else {
                                         selectAll(false) {
                                             numberOfSelection = updateSelectionNumber()
+                                            updateNumberOfSubjectSelected()
                                         }
                                     }
                                 }
@@ -296,7 +304,7 @@ fun MainAppScreenUI(
                                     color = Color.White
                                 )
                             }
-                            if (isMainScreen && numberOfSubjectSelected == 0) {
+                            AnimatedVisibility(isMainScreen && numberOfSubjectSelected == 0 && numberOfSelection > 0) {
                                 Column(
                                     verticalArrangement = Arrangement.Center,
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -378,9 +386,10 @@ fun MainAppScreenUI(
                                                 ) {
                                                     if (subject.isSelected) {
                                                         numberOfSelection = updateSelectionNumber()
+                                                        updateNumberOfSubjectSelected()
                                                     } else {
                                                         numberOfSelection = updateSelectionNumber()
-                                                        incrementSubjectSelected()
+                                                        updateNumberOfSubjectSelected()
                                                     }
                                                 }
                                             }
@@ -393,10 +402,10 @@ fun MainAppScreenUI(
                                             ) {
                                                 if (subject.isSelected) {
                                                     numberOfSelection = updateSelectionNumber()
-                                                    decrementSubjectSelected()
+                                                    updateNumberOfSubjectSelected()
                                                 } else {
                                                     numberOfSelection = updateSelectionNumber()
-                                                    incrementSubjectSelected()
+                                                    updateNumberOfSubjectSelected()
                                                 }
                                             }
                                         }
@@ -412,12 +421,8 @@ fun MainAppScreenUI(
                                         index,
                                         select
                                     ) {
-                                        if (select) {
-                                            incrementSubjectSelected()
-                                        } else {
-                                            decrementSubjectSelected()
-                                        }
                                         numberOfSelection = updateSelectionNumber()
+                                        updateNumberOfSubjectSelected()
                                     }
                                 },
                                 modifier = Modifier.align(
@@ -644,12 +649,11 @@ fun MainAppScreenPreview() {
             isMainScreen = true,
             onNavigateBack = {},
             title = "Imagyn",
-            numberOfSubjectSelected = 0,
-            incrementSubjectSelected = {},
-            decrementSubjectSelected = {},
+            updateNumberOfSubjectSelected = { },
             updateSelectionNumber = { 0 },
             getChapterToggleStatus = { false },
-            getSubjectToggleStatus = { false }
+            getSubjectToggleStatus = { false },
+            numberOfSubjectSelected = 0
         )
     }
 }

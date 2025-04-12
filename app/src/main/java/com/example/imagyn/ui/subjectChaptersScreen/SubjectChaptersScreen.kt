@@ -55,15 +55,14 @@ fun SubjectChaptersScreen(
         isMainScreen = false,
         onNavigateBack = onNavigateBack,
         title = subjectName,
-        numberOfSubjectSelected = 0,
-        incrementSubjectSelected = {},
-        decrementSubjectSelected = {},
+        updateNumberOfSubjectSelected = {},
         updateSelectionNumber = subjectScreenViewModel::updateNumberOfSelection,
         getChapterToggleStatus = { index ->
             subjectScreenViewModel.getCurrentToggleStatusChapter(
                 index
             )
         },
-        getSubjectToggleStatus = { false }
+        getSubjectToggleStatus = { false },
+        numberOfSubjectSelected = 0
     )
 }
