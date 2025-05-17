@@ -1,6 +1,9 @@
 package com.example.imagyn.ui.subjectChaptersScreen
 
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.imagyn.data.ImagynRepository
@@ -15,7 +18,7 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
     private val _chapterFlow = MutableStateFlow(emptyList<ChapterHomeItem>())
     val chapterFlow = _chapterFlow.asStateFlow()
 
-    var currentSubject = ""
+    var currentSubject by mutableStateOf("")
 
     fun getChapterFlow(subjectID: Int) {
         viewModelScope.launch {

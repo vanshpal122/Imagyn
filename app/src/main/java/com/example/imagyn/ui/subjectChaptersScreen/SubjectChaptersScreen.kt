@@ -85,7 +85,7 @@ fun SubjectChaptersScreen(
             )
         },
         currentFocusedChapter = null,
-        currentFocusedSubject = null,
+        currentFocusedSubject = SubjectData(subjectID = subjectID, subject = subjectScreenViewModel.currentSubject),
         modifier = modifier
     )
 }
