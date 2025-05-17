@@ -22,23 +22,36 @@ class HomeScreenViewModel(private val imagynRepository: ImagynRepository) : View
     val subjectFlow = _subjectFlow.asStateFlow()
     val chapterFlow = _chapterFlow.asStateFlow()
 
+    var currentFocusedChapter: ChapterData? = null
+    var currentFocusedSubject: SubjectData? = null
+
     fun updateNumberOfSelection(): Int {
         var count = 0
         chapterFlow.value.forEach {
-            if (it.isSelected) count++
+            if (it.isSelected) {
+                count++
+                if (count == 1) currentFocusedChapter = it.chapter
+            }
         }
         subjectFlow.value.forEach {
-            if (it.isSelected) count++
+            if (it.isSelected) {
+                count++
+                if (count == 1) currentFocusedSubject = it.subjectData
+            }
+        }
+        if (count != 1) {
+            currentFocusedSubject = null
+            currentFocusedChapter = null
         }
         return count
     }
 
     fun getNumberOfSubjectSelection(): Int {
-        var count = 0;
+        var count = 0
         subjectFlow.value.forEach {
             if (it.isSelected) count++
         }
-        return count;
+        return count
     }
 
     fun getCurrentToggleStatusChapter(index: Int): Boolean {
@@ -103,7 +116,7 @@ class HomeScreenViewModel(private val imagynRepository: ImagynRepository) : View
         updateSelectionNumber()
     }
 
-    fun deleteSelectedSubjectsAndChapters() {
+    fun deleteSelectedSubjectsAndChapters(deselectAll: () -> Unit) {
         viewModelScope.launch {
             try {
                 val deleteJobs = mutableListOf<Deferred<Unit>>()
@@ -121,27 +134,76 @@ class HomeScreenViewModel(private val imagynRepository: ImagynRepository) : View
             } catch (e: Exception) {
                 Log.e("DeleteSubjectAndChapter", "Error deleting subject or chapter", e)
             }
+            deselectAll()
         }
     }
 
+    fun renameSubject(subjectName: String, deselectAll: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                subjectFlow.value.filter { it.isSelected }.map { subject ->
+                    imagynRepository.updateSubject(
+                        subject.subjectData.copy(subject = subjectName)
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("Renaming Chapter", "ERROR RENAMING CHAPTER")
+            }
+            deselectAll()
+        }
+    }
 
-    fun createSubject(subjectName: String) {
+    fun renameCh(chapterName: String, deselectAll: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                chapterFlow.value.filter { it.isSelected }
+                    .map { chapter -> imagynRepository.updateChapter(chapter.chapter.copy(chapter = chapterName)) }
+            } catch (e: Exception) {
+                Log.e("Renaming Chapter", "ERROR RENAMING CHAPTER")
+            }
+        }
+        deselectAll()
+    }
+
+    fun moveSelectedChToSubject(subjectID: Int, deselectAll: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val updateJobs = chapterFlow.value.filter { it.isSelected }.map { chapter ->
+                    async(Dispatchers.IO) {
+                        imagynRepository.updateCardSubject(
+                            chapterID = chapter.chapter.chapterID,
+                            subjectID = subjectID
+                        )
+                        imagynRepository.updateChapter(chapter.chapter.copy(subjectID = subjectID))
+                    }
+                }
+                updateJobs.awaitAll()
+            } catch (e: Exception) {
+                Log.e("Moving to Subject $subjectID", "Moving to Subject $subjectID failed", e)
+            }
+            deselectAll()
+        }
+    }
+
+    fun createSubject(subjectName: String, deselectAll: () -> Unit) {
         viewModelScope.launch {
             try {
                 val subjectID = imagynRepository.insertSubject(SubjectData(subject = subjectName))
                 val updateJobs = chapterFlow.value.filter { it.isSelected }.map { chapter ->
                     async(Dispatchers.IO) {
+                        imagynRepository.updateChapter(chapter.chapter.copy(subjectID = subjectID.toInt()))
+                        Log.d("SUBJECTID", "$subjectID")
                         imagynRepository.updateCardSubject(
                             chapterID = chapter.chapter.chapterID,
                             subjectID = subjectID.toInt()
                         )
-                        imagynRepository.updateChapter(chapter.chapter.copy(subjectID = subjectID.toInt()))
                     }
                 }
                 updateJobs.awaitAll()
             } catch (e: Exception) {
                 Log.e("CreateSubject", "Error creating subject or updating cards", e)
             }
+            deselectAll()
         }
     }
 }

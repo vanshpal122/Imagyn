@@ -3,6 +3,7 @@ package com.example.imagyn.ui.homescreen
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -35,6 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,6 +47,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -54,6 +57,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
@@ -73,7 +78,7 @@ fun MainAppScreen(
     modifier: Modifier = Modifier,
     homeScreenViewModel: HomeScreenViewModel = viewModel(factory = AppViewModelProvider.Factory),
     onChapterCardClick: (Int) -> Unit,
-    onSubjectCardClick: (Int, String) -> Unit,
+    onSubjectCardClick: (Int) -> Unit,
     onAddCardsClick: (String) -> Unit,
 ) {
     val chapterList by homeScreenViewModel.chapterFlow.collectAsState()
@@ -82,20 +87,27 @@ fun MainAppScreen(
         mutableIntStateOf(0)
     }
 
+
     MainAppScreenUI(
         chapterList = chapterList,
         subjectList = subjectList,
         modifier = modifier,
         onAddChapterClick = { onAddCardsClick(it) },
         onChapterCardClick = onChapterCardClick,
-        onSubjectCardClick = { subjectId, subjectName ->
-            onSubjectCardClick(
-                subjectId,
-                subjectName
+        onSubjectCardClick = { subjectId ->
+            onSubjectCardClick(subjectId)
+        },
+        deleteSelectedSubjectsAndChapters = { _, deselectAll ->
+            homeScreenViewModel.deleteSelectedSubjectsAndChapters(
+                deselectAll
             )
         },
-        deleteSelectedSubjectsAndChapters = { homeScreenViewModel.deleteSelectedSubjectsAndChapters() },
-        createSubject = { homeScreenViewModel.createSubject(it) },
+        createSubject = { subjectName, deselectAll ->
+            homeScreenViewModel.createSubject(
+                subjectName,
+                deselectAll
+            )
+        },
         updateSubjectSelectedList = { index, b, updateSelection ->
             homeScreenViewModel.updateSelectedSubject(
                 index = index,
@@ -125,7 +137,28 @@ fun MainAppScreen(
         updateSelectionNumber = homeScreenViewModel::updateNumberOfSelection,
         getChapterToggleStatus = { index -> homeScreenViewModel.getCurrentToggleStatusChapter(index) },
         getSubjectToggleStatus = { index -> homeScreenViewModel.getCurrentToggleStatusSubject(index) },
-        numberOfSubjectSelected = numberOfSubjectSelected
+        numberOfSubjectSelected = numberOfSubjectSelected,
+        removeChFromSub = {},
+        renameSubject = { subjectName, deselectAll ->
+            homeScreenViewModel.renameSubject(
+                subjectName,
+                deselectAll
+            )
+        },
+        moveChToSubject = { subjectID, deselectAll ->
+            homeScreenViewModel.moveSelectedChToSubject(
+                subjectID,
+                deselectAll
+            )
+        },
+        renameCh = { chapterName, deselectAll ->
+            homeScreenViewModel.renameCh(
+                chapterName,
+                deselectAll
+            )
+        },
+        currentFocusedChapter = homeScreenViewModel.currentFocusedChapter,
+        currentFocusedSubject = homeScreenViewModel.currentFocusedSubject
     )
 }
 
@@ -137,9 +170,9 @@ fun MainAppScreenUI(
     modifier: Modifier = Modifier,
     onAddChapterClick: (String) -> Unit,
     onChapterCardClick: (Int) -> Unit,
-    onSubjectCardClick: (Int, String) -> Unit,
-    deleteSelectedSubjectsAndChapters: (Int) -> Unit,
-    createSubject: (String) -> Unit,
+    onSubjectCardClick: (Int) -> Unit,
+    deleteSelectedSubjectsAndChapters: (Int, () -> Unit) -> Unit,
+    createSubject: (String, () -> Unit) -> Unit,
     updateSubjectSelectedList: (Int, Boolean, () -> Unit) -> Unit,
     updateChapterSelectedList: (Int, Boolean, () -> Unit) -> Unit,
     selectAll: (Boolean, () -> Unit) -> Unit,
@@ -150,13 +183,31 @@ fun MainAppScreenUI(
     updateSelectionNumber: () -> Int,
     getChapterToggleStatus: (Int) -> Boolean,
     getSubjectToggleStatus: (Int) -> Boolean,
-    numberOfSubjectSelected: Int
+    numberOfSubjectSelected: Int,
+    removeChFromSub: () -> Unit,
+    renameSubject: (String, () -> Unit) -> Unit,
+    moveChToSubject: (Int, () -> Unit) -> Unit,
+    renameCh: (String, () -> Unit) -> Unit,
+    currentFocusedChapter: ChapterData?,
+    currentFocusedSubject: SubjectData?
 ) {
-    var isDropDown by rememberSaveable {
+    var isMoreOptionsDropDown by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var isSubjectNameDropDown by rememberSaveable {
         mutableStateOf(false)
     }
 
     var isChapterAlertBoxShown by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var isRenameSubjectAlertBoxShown by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var isRenameChapterAlertBoxShown by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -169,6 +220,10 @@ fun MainAppScreenUI(
     }
 
     var isSubjectAlertBoxShown by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var isMoveToSubjectDialogBoxVisible by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -194,24 +249,41 @@ fun MainAppScreenUI(
                     },
                     title = { Text(text = title) },
                     actions = {
-                        if (chapterList.isNotEmpty() || subjectList.isNotEmpty()) {
-                            IconButton(onClick = { isDropDown = !isDropDown }) {
+                        if ((chapterList.isNotEmpty() || subjectList.isNotEmpty()) || (!isMainScreen)) {
+                            IconButton(onClick = {
+                                isMoreOptionsDropDown = !isMoreOptionsDropDown
+                            }) {
                                 Icon(
                                     imageVector = Icons.Default.MoreVert,
                                     contentDescription = "More Options"
                                 )
                                 DropdownMenu(
-                                    expanded = isDropDown,
-                                    onDismissRequest = { isDropDown = !isDropDown }) {
-                                    DropdownMenuItem(text = {
-                                        Text(
-                                            text = "Select",
-                                            style = MaterialTheme.typography.labelLarge
-                                        )
-                                    }, onClick = {
-                                        selectableState = true
-                                        isDropDown = false
-                                    })
+                                    expanded = isMoreOptionsDropDown,
+                                    onDismissRequest = {
+                                        isMoreOptionsDropDown = !isMoreOptionsDropDown
+                                    }) {
+                                    if (chapterList.isNotEmpty() || subjectList.isNotEmpty()) {
+                                        DropdownMenuItem(text = {
+                                            Text(
+                                                text = "Select",
+                                                style = MaterialTheme.typography.labelLarge
+                                            )
+                                        }, onClick = {
+                                            selectableState = true
+                                            isMoreOptionsDropDown = false
+                                        })
+                                    }
+                                    if (!isMainScreen) {
+                                        DropdownMenuItem(text = {
+                                            Text(
+                                                text = "Rename",
+                                                style = MaterialTheme.typography.labelLarge
+                                            )
+                                        }, onClick = {
+                                            isMoreOptionsDropDown = false
+                                            isRenameSubjectAlertBoxShown = true
+                                        })
+                                    }
                                 }
                             }
                         }
@@ -243,12 +315,13 @@ fun MainAppScreenUI(
                     navigationIcon = {
                         TextButton(
                             onClick = {
-                                deleteSelectedSubjectsAndChapters(numberOfSelection)
-                                selectableState = false
-                                selectAll(false) {
-                                    numberOfSelection = updateSelectionNumber()
-                                    updateNumberOfSubjectSelected()
+                                deleteSelectedSubjectsAndChapters(numberOfSelection) {
+                                    selectAll(false) {
+                                        numberOfSelection = updateSelectionNumber()
+                                        updateNumberOfSubjectSelected()
+                                    }
                                 }
+                                selectableState = false
                             },
                             enabled = numberOfSelection > 0
                         ) {
@@ -271,58 +344,69 @@ fun MainAppScreenUI(
                     actions = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = if (isMainScreen) Arrangement.SpaceBetween else Arrangement.Center,
+                            horizontalArrangement = if ((isMainScreen && numberOfSubjectSelected == 0 && numberOfSelection > 0) ||
+                                (!isMainScreen && numberOfSelection > 0) || (isMainScreen && numberOfSelection == 1)
+                            ) Arrangement.SpaceBetween else Arrangement.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .animateContentSize()
                                 .padding(8.dp)
                         ) {
-                            Column(
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.clickable {
-                                    if (numberOfSelection < (chapterList.size + subjectList.size)) {
-                                        selectAll(true) {
-                                            numberOfSelection = updateSelectionNumber()
-                                            updateNumberOfSubjectSelected()
-                                        }
-                                    } else {
-                                        selectAll(false) {
-                                            numberOfSelection = updateSelectionNumber()
-                                            updateNumberOfSubjectSelected()
-                                        }
+                            BottomNavItem(
+                                title = "Select All",
+                                icon = if (numberOfSelection == (chapterList.size + subjectList.size)) R.drawable.check_box else R.drawable.check_box_outline_blank
+                            ) {
+                                if (numberOfSelection < (chapterList.size + subjectList.size)) {
+                                    selectAll(true) {
+                                        numberOfSelection = updateSelectionNumber()
+                                        updateNumberOfSubjectSelected()
+                                    }
+                                } else {
+                                    selectAll(false) {
+                                        numberOfSelection = updateSelectionNumber()
+                                        updateNumberOfSubjectSelected()
                                     }
                                 }
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = if (numberOfSelection == (chapterList.size + subjectList.size)) R.drawable.check_box else R.drawable.check_box_outline_blank),
-                                    contentDescription = null,
-                                    tint = Color.White
-                                )
-                                Text(
-                                    text = "Select All",
-                                    fontSize = 10.sp,
-                                    color = Color.White
-                                )
                             }
-                            AnimatedVisibility(isMainScreen && numberOfSubjectSelected == 0 && numberOfSelection > 0) {
-                                Column(
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier
-                                        .clickable { isSubjectAlertBoxShown = true }
+                            if (isMainScreen && numberOfSelection == 1) {
+                                BottomNavItem(
+                                    title = "Rename",
+                                    icon = R.drawable.edit_square
                                 ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.create_subject),
-                                        modifier = Modifier,
-                                        contentDescription = null,
-                                        tint = Color.White
-                                    )
-                                    Text(
-                                        text = "Create Subject",
-                                        fontSize = 10.sp,
-                                        color = Color.White,
-                                        modifier = Modifier
-                                    )
+                                    if (numberOfSubjectSelected == 1) isRenameSubjectAlertBoxShown =
+                                        true
+                                    else isRenameChapterAlertBoxShown = true
+                                }
+                            }
+                            if ((isMainScreen && numberOfSubjectSelected == 0 && numberOfSelection > 0) ||
+                                (!isMainScreen && numberOfSelection > 0)
+                            ) {
+                                if (isMainScreen) {
+                                    BottomNavItem(
+                                        title = "Create Subject",
+                                        icon = R.drawable.create_subject
+                                    ) {
+                                        isSubjectAlertBoxShown = true
+                                    }
+                                    if (subjectList.isNotEmpty()) {
+                                        BottomNavItem(
+                                            title = "Move To Subject",
+                                            icon = R.drawable.movetosubject
+                                        ) {
+                                            isMoveToSubjectDialogBoxVisible = true
+                                        }
+                                    }
+                                } else {
+                                    BottomNavItem(
+                                        title = "Move Out",
+                                        icon = R.drawable.stack_off,
+                                    ) {
+                                        removeChFromSub()
+                                        selectableState = false
+                                        selectAll(false) {
+                                            numberOfSelection = updateSelectionNumber()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -344,7 +428,7 @@ fun MainAppScreenUI(
                 verticalArrangement = Arrangement.spacedBy(48.dp),
                 modifier = Modifier
                     .then(
-                        if (!selectableState && isMainScreen) Modifier.drawWithContent {
+                        if (!selectableState) Modifier.drawWithContent {
                             drawContent()
                             withTransform({
                                 translate(top = size.height / 2)
@@ -362,35 +446,27 @@ fun MainAppScreenUI(
                     .fillMaxSize()
             ) {
                 itemsIndexed(
-                    subjectList,
-                    key = { _, subject -> subject.subjectData.subjectID }) { index, subject ->
+                    subjectList
+                ) { index, subject ->
                     Box(
                         modifier = Modifier
                             .wrapContentSize()
                     ) {
-                        subject.subjectData.subject?.let {
+                        subject.subjectData.subject?.let { subjectName ->
                             SubjectCardUi(
-                                content = it,
+                                content = subjectName,
                                 modifier = Modifier.pointerInput(Unit) {
                                     detectTapGestures(
                                         onTap = {
                                             if (!selectableState) {
-                                                onSubjectCardClick(
-                                                    subject.subjectData.subjectID,
-                                                    subject.subjectData.subject
-                                                )
+                                                onSubjectCardClick(subject.subjectData.subjectID)
                                             } else {
                                                 updateSubjectSelectedList(
                                                     index,
                                                     !getSubjectToggleStatus(index)
                                                 ) {
-                                                    if (subject.isSelected) {
-                                                        numberOfSelection = updateSelectionNumber()
-                                                        updateNumberOfSubjectSelected()
-                                                    } else {
-                                                        numberOfSelection = updateSelectionNumber()
-                                                        updateNumberOfSubjectSelected()
-                                                    }
+                                                    updateNumberOfSubjectSelected()
+                                                    numberOfSelection = updateSelectionNumber()
                                                 }
                                             }
                                         },
@@ -400,13 +476,8 @@ fun MainAppScreenUI(
                                                 index,
                                                 !getSubjectToggleStatus(index)
                                             ) {
-                                                if (subject.isSelected) {
-                                                    numberOfSelection = updateSelectionNumber()
-                                                    updateNumberOfSubjectSelected()
-                                                } else {
-                                                    numberOfSelection = updateSelectionNumber()
-                                                    updateNumberOfSubjectSelected()
-                                                }
+                                                updateNumberOfSubjectSelected()
+                                                numberOfSelection = updateSelectionNumber()
                                             }
                                         }
                                     )
@@ -434,8 +505,8 @@ fun MainAppScreenUI(
                     }
                 }
                 itemsIndexed(
-                    chapterList,
-                    key = { _, chapter -> chapter.chapter.chapterID }) { index, chapter ->
+                    chapterList
+                ) { index, chapter ->
                     Box(modifier = Modifier.wrapContentSize()) {
                         ChapterCardUi(
                             content = chapter.chapter.chapter,
@@ -480,7 +551,7 @@ fun MainAppScreenUI(
             }
             if (isChapterAlertBoxShown) {
                 val alertBoxState = rememberAlertBoxState()
-                CustomiseAlertDialogBox(
+                CustomiseAlertInputDialogBox(
                     title = "Chapter Name",
                     confirmTitle = "Add Cards",
                     alertBoxState = alertBoxState,
@@ -493,24 +564,163 @@ fun MainAppScreenUI(
                     }
                 )
             }
+            if (isMoveToSubjectDialogBoxVisible) {
+                var currentSubject = subjectList.first()
+                val density = LocalDensity.current
+                var dropDownWidthDp by remember { mutableStateOf(0.dp) }
+                CustomiseAlertDialogBox(
+                    title = "Move to Subject",
+                    confirmTitle = "Move In",
+                    text = {
+                        OutlinedCard(
+                            onClick = { isSubjectNameDropDown = !isSubjectNameDropDown },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .onSizeChanged {
+                                        with(density) {
+                                            dropDownWidthDp = it.width.toDp()
+                                        }
+                                    }
+                            ) {
+                                currentSubject.subjectData.subject?.let {
+                                    Text(
+                                        text = it,
+                                        modifier = Modifier.padding(4.dp)
+                                    )
+                                }
+                                Icon(
+                                    painter = painterResource(if (isSubjectNameDropDown) R.drawable.arrow_drop_up else R.drawable.arrow_drop_down),
+                                    contentDescription = "Dropdown"
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = isSubjectNameDropDown,
+                                onDismissRequest = {
+                                    isSubjectNameDropDown = !isSubjectNameDropDown
+                                },
+                                modifier = Modifier.width(dropDownWidthDp)
+                            ) {
+                                subjectList.forEach {
+                                    DropdownMenuItem(
+                                        text = {
+                                            it.subjectData.subject?.let { it1 ->
+                                                Text(
+                                                    text = it1,
+                                                    style = MaterialTheme.typography.labelLarge
+                                                )
+                                            }
+                                        }, onClick = {
+                                            currentSubject = it
+                                            isSubjectNameDropDown = false
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    dismissAlertBox = {
+                        isMoveToSubjectDialogBoxVisible = false
+                        selectableState = false
+                        selectAll(false) {
+                            numberOfSelection = updateSelectionNumber()
+                            updateNumberOfSubjectSelected()
+                        }
+                    },
+                    onConfirmButtonClick = {
+                        isMoveToSubjectDialogBoxVisible = false
+                        moveChToSubject(currentSubject.subjectData.subjectID) {
+                            selectAll(false) {
+                                numberOfSelection = updateSelectionNumber()
+                            }
+                        }
+                        selectableState = false
+                    },
+                    isConfirmButtonEnabled = true
+                )
+            }
             if (isSubjectAlertBoxShown) {
                 val alertBoxState = rememberAlertBoxState()
-                CustomiseAlertDialogBox(
+                CustomiseAlertInputDialogBox(
                     title = "Subject Name",
                     confirmTitle = "Create",
                     alertBoxState = alertBoxState,
                     dismissAlertBox = {
                         isSubjectAlertBoxShown = false
                         selectableState = false
+                        selectAll(false) {
+                            numberOfSelection = updateSelectionNumber()
+                        }
                     },
                     onConfirmButtonClick = {
+                        createSubject(it) {
+                            selectAll(false) {
+                                numberOfSelection = updateSelectionNumber()
+                            }
+                        }
                         isSubjectAlertBoxShown = false
                         selectableState = false
-                        createSubject(it)
                     }
                 )
             }
-            if (!selectableState && isMainScreen) {
+            if (isRenameChapterAlertBoxShown) {
+                val alertBoxState = rememberAlertBoxState(currentFocusedChapter?.chapter ?: "")
+                CustomiseAlertInputDialogBox(
+                    title = "Chapter Name",
+                    confirmTitle = "Rename",
+                    alertBoxState = alertBoxState,
+                    dismissAlertBox = {
+                        isRenameChapterAlertBoxShown = false
+                        selectableState = false
+                        selectAll(false) {
+                            numberOfSelection = updateSelectionNumber()
+                        }
+                    },
+                    onConfirmButtonClick = {
+                        renameCh(it) {
+                            selectAll(false) {
+                                numberOfSelection = updateSelectionNumber()
+                            }
+                        }
+                        isRenameChapterAlertBoxShown = false
+                        selectableState = false
+                    }
+                )
+            }
+            if (isRenameSubjectAlertBoxShown) {
+                val alertBoxState = rememberAlertBoxState(currentFocusedSubject?.subject ?: "")
+                CustomiseAlertInputDialogBox(
+                    title = "Subject Name",
+                    confirmTitle = "Rename",
+                    alertBoxState = alertBoxState,
+                    dismissAlertBox = {
+                        isRenameSubjectAlertBoxShown = false
+                        selectableState = false
+                        selectAll(false) {
+                            numberOfSelection = updateSelectionNumber()
+                            updateNumberOfSubjectSelected()
+                        }
+                    },
+                    onConfirmButtonClick = {
+                        renameSubject(it) {
+                            selectAll(false) {
+                                numberOfSelection = updateSelectionNumber()
+                                updateNumberOfSubjectSelected()
+                            }
+                        }
+                        selectableState = false
+                        isRenameSubjectAlertBoxShown = false
+                    }
+                )
+            }
+            if (!selectableState) {
                 IconButton(
                     onClick = { isChapterAlertBoxShown = true },
                     modifier = Modifier
@@ -525,7 +735,10 @@ fun MainAppScreenUI(
                             painter = painterResource(id = R.drawable.add_chapter_icon),
                             contentDescription = null
                         )
-                        Text(text = "New Chapter", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            text = if (isMainScreen) "New Chapter" else "Add Chapter",
+                            style = MaterialTheme.typography.titleLarge
+                        )
                     }
                 }
             }
@@ -570,12 +783,37 @@ class AlertBoxState(
 }
 
 @Composable
-fun CustomiseAlertDialogBox(
+fun CustomiseAlertInputDialogBox(
     title: String,
     confirmTitle: String,
     alertBoxState: AlertBoxState,
     dismissAlertBox: () -> Unit,
     onConfirmButtonClick: (String) -> Unit
+) {
+    CustomiseAlertDialogBox(
+        title = title,
+        confirmTitle = confirmTitle,
+        text = {
+            OutlinedTextField(
+                value = alertBoxState.textInput,
+                onValueChange = { alertBoxState.changeInput(it) },
+                singleLine = true
+            )
+        },
+        dismissAlertBox = dismissAlertBox,
+        onConfirmButtonClick = { onConfirmButtonClick(alertBoxState.textInput) },
+        isConfirmButtonEnabled = alertBoxState.textInput.isNotEmpty()
+    )
+}
+
+@Composable
+fun CustomiseAlertDialogBox(
+    title: String,
+    confirmTitle: String,
+    text: @Composable (() -> Unit)?,
+    dismissAlertBox: () -> Unit,
+    onConfirmButtonClick: () -> Unit,
+    isConfirmButtonEnabled: Boolean
 ) {
     AlertDialog(
         title = { Text(text = title, style = MaterialTheme.typography.titleLarge) },
@@ -599,8 +837,8 @@ fun CustomiseAlertDialogBox(
                     )
                 }
                 Button(
-                    onClick = { onConfirmButtonClick(alertBoxState.textInput) },
-                    enabled = alertBoxState.textInput.isNotEmpty(),
+                    onClick = onConfirmButtonClick,
+                    enabled = isConfirmButtonEnabled,
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
@@ -614,14 +852,37 @@ fun CustomiseAlertDialogBox(
         onDismissRequest = dismissAlertBox,
         confirmButton = {
         },
-        text = {
-            OutlinedTextField(
-                value = alertBoxState.textInput,
-                onValueChange = { alertBoxState.changeInput(it) },
-                singleLine = true
-            )
-        }
+        text = text
     )
+}
+
+@Composable
+fun BottomNavItem(
+    title: String,
+    icon: Int,
+    onClick: () -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clickable {
+                onClick()
+            }
+    ) {
+        Icon(
+            painter = painterResource(id = icon),
+            modifier = Modifier,
+            contentDescription = null,
+            tint = Color.White
+        )
+        Text(
+            text = title,
+            fontSize = 10.sp,
+            color = Color.White,
+            modifier = Modifier
+        )
+    }
 }
 
 @Preview
@@ -640,9 +901,9 @@ fun MainAppScreenPreview() {
             ),
             onAddChapterClick = {},
             onChapterCardClick = {},
-            onSubjectCardClick = { _, _ -> },
-            deleteSelectedSubjectsAndChapters = {},
-            createSubject = {},
+            onSubjectCardClick = { },
+            deleteSelectedSubjectsAndChapters = { _, _ -> },
+            createSubject = { _, _ -> },
             updateSubjectSelectedList = { _, _, _ -> },
             updateChapterSelectedList = { _, _, _ -> },
             selectAll = { _, _ -> },
@@ -653,22 +914,13 @@ fun MainAppScreenPreview() {
             updateSelectionNumber = { 0 },
             getChapterToggleStatus = { false },
             getSubjectToggleStatus = { false },
-            numberOfSubjectSelected = 0
+            numberOfSubjectSelected = 0,
+            removeChFromSub = {},
+            renameSubject = { _, _ -> },
+            moveChToSubject = { _, _ -> },
+            renameCh = { _, _ -> },
+            currentFocusedChapter = null,
+            currentFocusedSubject = null
         )
     }
 }
-
-//@Preview
-//@Composable
-//fun AlertBoxPreview() {
-//    val alertBoxState = rememberAlertBoxState()
-//    ImagynTheme {
-//        CustomiseAlertDialogBox(
-//            title = "Subject Name",
-//            confirmTitle = "Add Cards",
-//            alertBoxState = alertBoxState,
-//            dismissAlertBox = { /*TODO*/ }) {
-//
-//        }
-//    }
-//}

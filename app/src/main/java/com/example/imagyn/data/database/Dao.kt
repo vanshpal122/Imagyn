@@ -48,11 +48,14 @@ interface CardDao {
     @Query("SELECT * from subjects")
     fun getAllSubjects(): Flow<List<SubjectData>>
 
+    @Query("SELECT * from subjects where subject_id = :subjectID")
+    suspend fun getSubjectName(subjectID: Int): SubjectData
+
     @Query("SELECT * FROM cards WHERE card_id = :keyCard ")
     fun getCardWithID(keyCard: Int): Flow<FlipCard>
 
     @Query("UPDATE cards SET subject_id = :subjectID WHERE chapter_id = :chapterID")
-    suspend fun updateCardSubject(chapterID: Int, subjectID: Int)
+    suspend fun updateCardSubject(chapterID: Int, subjectID: Int?)
 
     @Query("UPDATE cards SET priority = priority - 1 WHERE chapter_id = :chapterID and priority > :priority")
     suspend fun updatePrioritiesAfterDel(chapterID: Int, priority: Int)

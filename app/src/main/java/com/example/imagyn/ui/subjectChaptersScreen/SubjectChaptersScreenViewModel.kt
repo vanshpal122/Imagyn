@@ -15,15 +15,29 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
     private val _chapterFlow = MutableStateFlow(emptyList<ChapterHomeItem>())
     val chapterFlow = _chapterFlow.asStateFlow()
 
+    var currentSubject = ""
+
     fun getChapterFlow(subjectID: Int) {
         viewModelScope.launch {
-            imagynRepository.getChaptersOfSubject(subjectID)
-                .map { list ->
-                    list.map { ChapterHomeItem(it, false) }
-                }
-                .collect {
-                    _chapterFlow.value = it
-                }
+            try {
+                imagynRepository.getChaptersOfSubject(subjectID)
+                    .map { list ->
+                        list.map { ChapterHomeItem(it, false) }
+                    }
+                    .collect {
+                        _chapterFlow.value = it
+                    }
+            } catch (e: Exception) {
+                Log.e("SUBJECT", "$e.message from getChapterFlow")
+            }
+        }
+    }
+
+    suspend fun getSubjectName(subjectID: Int) {
+        try {
+            currentSubject = imagynRepository.getSubjectName(subjectID).subject.toString()
+        } catch (e: Exception) {
+            Log.e("SUBJECT", "${e.message} from getSubjectName function")
         }
     }
 
@@ -35,6 +49,11 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
         return count
     }
 
+    fun renameSubject(subjectData: SubjectData) {
+        viewModelScope.launch {
+            imagynRepository.updateSubject(subjectData)
+        }
+    }
 
     fun selectAll(isSelected: Boolean, updateSelection: () -> Unit) {
         viewModelScope.launch {
@@ -48,7 +67,8 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
         subjectID: Int,
         subjectName: String,
         onSubjectDelete: () -> Unit,
-        numberOfSelection: Int
+        numberOfSelection: Int,
+        deselectAll: () -> Unit
     ) {
         viewModelScope.launch {
             try {
@@ -67,11 +87,38 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
             } catch (e: Exception) {
                 Log.e("DeleteSubjectChapter", "Error deleting chapters of Subject", e)
             }
+            deselectAll()
+        }
+    }
+
+    fun removeSelectedChapterFromSub() {
+        viewModelScope.launch {
+            try {
+                chapterFlow.value.filter { it.isSelected }
+                    .forEach { chapter ->
+                        imagynRepository.updateChapter(chapter.chapter.copy(subjectID = null))
+                        imagynRepository.updateCardSubject(chapter.chapter.chapterID, null)
+                    }
+            } catch (e: Exception) {
+                Log.e("RemoveChapterFromSub", "Error removing chapters of Subject", e)
+            }
         }
     }
 
     fun getCurrentToggleStatusChapter(index: Int): Boolean {
         return this.chapterFlow.value[index].isSelected
+    }
+
+    fun renameCh(chapterName: String, deselectAll: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                chapterFlow.value.filter { it.isSelected }
+                    .map { chapter -> imagynRepository.updateChapter(chapter.chapter.copy(chapter = chapterName)) }
+            } catch (e: Exception) {
+                Log.e("Renaming Chapter", "ERROR RENAMING CHAPTER")
+            }
+            deselectAll()
+        }
     }
 
     fun updateSelectedChapter(

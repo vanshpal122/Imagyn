@@ -9,8 +9,9 @@ class ImagynRepository(private val cardDao: CardDao) {
     suspend fun insertCard(flipCard: FlipCard) = cardDao.insertFlipCard(flipCard)
     suspend fun updateCard(flipCard: FlipCard) = cardDao.updateFlipCard(flipCard)
     suspend fun deleteCard(flipCard: FlipCard) = cardDao.deleteFlipCard(flipCard)
-    suspend fun updateCardSubject(chapterID: Int, subjectID: Int) =
+    suspend fun updateCardSubject(chapterID: Int, subjectID: Int?) =
         cardDao.updateCardSubject(chapterID = chapterID, subjectID = subjectID)
+    suspend fun getSubjectName(subjectID: Int) = cardDao.getSubjectName(subjectID)
 
     suspend fun insertChapter(chapterData: ChapterData) = cardDao.insertChapter(chapterData)
     suspend fun updateChapter(chapterData: ChapterData) = cardDao.updateChapter(chapterData)

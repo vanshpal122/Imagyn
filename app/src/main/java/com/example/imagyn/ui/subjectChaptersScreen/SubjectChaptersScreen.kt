@@ -6,6 +6,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.imagyn.data.database.SubjectData
 import com.example.imagyn.ui.AppViewModelProvider
 import com.example.imagyn.ui.homescreen.MainAppScreenUI
 
@@ -16,9 +17,10 @@ fun SubjectChaptersScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     subjectScreenViewModel: SubjectChaptersScreenViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    subjectName: String
+    onAddChapterClick: (String) -> Unit
 ) {
     LaunchedEffect(subjectID) {
+        subjectScreenViewModel.getSubjectName(subjectID)
         subjectScreenViewModel.getChapterFlow(subjectID)
     }
     val chaptersList by subjectScreenViewModel.chapterFlow.collectAsState()
@@ -26,18 +28,19 @@ fun SubjectChaptersScreen(
     MainAppScreenUI(
         chapterList = chaptersList,
         subjectList = emptyList(),
-        onAddChapterClick = {},
+        onAddChapterClick = { chapterName -> onAddChapterClick(chapterName) },
         onChapterCardClick = onChapterCardClick,
-        onSubjectCardClick = { _, _ -> },
-        deleteSelectedSubjectsAndChapters = { numberOfSelection ->
+        onSubjectCardClick = { },
+        deleteSelectedSubjectsAndChapters = { numberOfSelection, deselectAll ->
             subjectScreenViewModel.deleteSelectedChapters(
                 subjectID,
-                subjectName,
+                subjectScreenViewModel.currentSubject,
                 onNavigateBack,
-                numberOfSelection
+                numberOfSelection,
+                deselectAll
             )
         },
-        createSubject = {},
+        createSubject = { _, _ -> },
         updateSubjectSelectedList = { _, _, _ -> },
         updateChapterSelectedList = { index, b, updateSelection ->
             subjectScreenViewModel.updateSelectedChapter(
@@ -54,7 +57,7 @@ fun SubjectChaptersScreen(
         },
         isMainScreen = false,
         onNavigateBack = onNavigateBack,
-        title = subjectName,
+        title = subjectScreenViewModel.currentSubject,
         updateNumberOfSubjectSelected = {},
         updateSelectionNumber = subjectScreenViewModel::updateNumberOfSelection,
         getChapterToggleStatus = { index ->
@@ -63,6 +66,26 @@ fun SubjectChaptersScreen(
             )
         },
         getSubjectToggleStatus = { false },
-        numberOfSubjectSelected = 0
+        numberOfSubjectSelected = 0,
+        removeChFromSub = subjectScreenViewModel::removeSelectedChapterFromSub,
+        renameSubject = { subjectN, _ ->
+            subjectScreenViewModel.renameSubject(
+                SubjectData(
+                    subjectID = subjectID,
+                    subject = subjectN
+                )
+            )
+            subjectScreenViewModel.currentSubject = subjectN
+        },
+        moveChToSubject = { _, _ -> },
+        renameCh = { chapterName, deselectAll ->
+            subjectScreenViewModel.renameCh(
+                chapterName,
+                deselectAll
+            )
+        },
+        currentFocusedChapter = null,
+        currentFocusedSubject = null,
+        modifier = modifier
     )
 }

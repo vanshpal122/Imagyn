@@ -19,7 +19,7 @@ object HomeScreen
 
 @Serializable
 class SubjectChapterScreenDestination(
-    val subjectID: Int, val subjectName: String
+    val subjectID: Int
 )
 
 @Serializable
@@ -60,10 +60,11 @@ data class ReorderDestination(
 fun ImagynNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
     NavHost(navController = navController, startDestination = HomeScreen) {
         composable<HomeScreen> {
-            MainAppScreen(onChapterCardClick = { chapterID ->
+            MainAppScreen(
+                onChapterCardClick = { chapterID ->
                 navController.navigate(ChapterFlipCardScreenDestination(chapterID, null))
-            }, onSubjectCardClick = { subjectID, subjectName ->
-                navController.navigate(SubjectChapterScreenDestination(subjectID, subjectName))
+            }, onSubjectCardClick = { subjectID ->
+                navController.navigate(SubjectChapterScreenDestination(subjectID))
             }, onAddCardsClick = { chapterName ->
                 navController.navigate(
                     ColorSelectDestination(
@@ -90,7 +91,17 @@ fun ImagynNavHost(navController: NavHostController, modifier: Modifier = Modifie
                 subjectID = arguments.subjectID,
                 onNavigateBack = { navController.popBackStack() },
                 modifier = modifier,
-                subjectName = arguments.subjectName
+                onAddChapterClick = { chapterName ->
+                    navController.navigate(
+                        ColorSelectDestination(
+                            chapterName = chapterName,
+                            chapterID = null,
+                            subjectID = arguments.subjectID,
+                            priority = 1,
+                            isNewChapterRoute = true
+                        )
+                    )
+                }
             )
         }
         composable<ColorSelectDestination> { entry ->
@@ -160,9 +171,6 @@ fun ImagynNavHost(navController: NavHostController, modifier: Modifier = Modifie
         composable<ReorderDestination> { entry ->
             val arguments = entry.toRoute<ReorderDestination>()
             ReorderGrid(arguments.chapterID, { navController.popBackStack() })
-//            ReorderScreen(tempCardList = emptyList(), onBackClick = { navController.popBackStack() }) {
-//
-//            }
         }
     }
 }
