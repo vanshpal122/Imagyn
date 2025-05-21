@@ -84,7 +84,7 @@ fun SubjectChaptersScreen(
                 deselectAll
             )
         },
-        currentFocusedChapter = null,
+        currentFocusedChapter = subjectScreenViewModel.currentFocusedChapter,
         currentFocusedSubject = SubjectData(subjectID = subjectID, subject = subjectScreenViewModel.currentSubject),
         modifier = modifier
     )

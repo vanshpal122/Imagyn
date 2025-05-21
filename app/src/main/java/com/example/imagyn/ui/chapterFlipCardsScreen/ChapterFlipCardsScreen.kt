@@ -52,6 +52,9 @@ import com.example.imagyn.ui.AppViewModelProvider
 import com.example.imagyn.ui.cardUtils.FlipCardUi
 import kotlinx.coroutines.launch
 
+
+enum class Screens { PLAYSCREEN, CHAPTERSCREEN, EXPANDEDSCREEN }
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ChapterFlipCardsScreen(
@@ -64,47 +67,64 @@ fun ChapterFlipCardsScreen(
     onReorderButtonClick: () -> Unit
 ) {
     val flipCardList by chapterFlipCardViewModel.getFlipCards(chapterID).collectAsState()
-    var isPlayScreen by remember {
-        mutableStateOf(false)
+    var screen by remember {
+        mutableStateOf(Screens.CHAPTERSCREEN)
     }
     val pagerState = rememberPagerState {
         flipCardList.size + 1
     }
     SharedTransitionLayout {
-        AnimatedContent(targetState = isPlayScreen, label = "flipCardPlay") { targetState ->
-            if (!targetState) {
-                ChapterFlipCardsScreenUI(
-                    flipCardList = flipCardList,
-                    onBackButtonClick = onBackButtonClick,
-                    onReorderButtonClick = onReorderButtonClick,
-                    onAddNewButtonClick = { priority ->
-                        onAddNewButtonClick(
-                            priority
-                        )
-                    },
-                    onEditClick = { cardId -> onEditClick(cardId) },
-                    onDeleteClick = { flipCard, b ->
-                        chapterFlipCardViewModel.deleteFlipCard(
-                            flipCard,
-                            b, onBackButtonClick
-                        )
-                    },
-                    pagerState = pagerState,
-                    animatedVisibilityScope = this@AnimatedContent,
-                    sharedTransitionScope = this@SharedTransitionLayout,
-                    onCardClick = { isPlayScreen = true }
-                )
-            } else {
-                FlipCardPlayScreenUI(
-                    flipCard = flipCardList[pagerState.currentPage],
-                    onCrossButtonClick = { isPlayScreen = false },
-                    onSkipNextButtonClick = { pagerState.requestScrollToPage(pagerState.currentPage + 1) },
-                    onSkipPreviousButtonClick = { pagerState.requestScrollToPage(pagerState.currentPage - 1) },
-                    canSkipToNext = pagerState.currentPage < (flipCardList.size - 1),
-                    canSkipToPrev = pagerState.currentPage > 0,
-                    animatedVisibilityScope = this@AnimatedContent,
-                    sharedTransitionScope = this@SharedTransitionLayout
-                )
+        AnimatedContent(targetState = screen, label = "flipCardPlay") { targetState ->
+            when (targetState) {
+                Screens.CHAPTERSCREEN -> {
+                    ChapterFlipCardsScreenUI(
+                        flipCardList = flipCardList,
+                        onBackButtonClick = onBackButtonClick,
+                        onReorderButtonClick = onReorderButtonClick,
+                        onAddNewButtonClick = { priority ->
+                            onAddNewButtonClick(
+                                priority
+                            )
+                        },
+                        onEditClick = { cardId -> onEditClick(cardId) },
+                        onDeleteClick = { flipCard, b ->
+                            chapterFlipCardViewModel.deleteFlipCard(
+                                flipCard,
+                                b, onBackButtonClick
+                            )
+                        },
+                        pagerState = pagerState,
+                        animatedVisibilityScope = this@AnimatedContent,
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        onCardClick = {
+                            if (pagerState.currentPage != flipCardList.size) screen =
+                                Screens.PLAYSCREEN
+                        }
+                    )
+                }
+
+                Screens.PLAYSCREEN -> {
+                    FlipCardPlayScreenUI(
+                        flipCard = flipCardList[pagerState.currentPage],
+                        onCrossButtonClick = { screen = Screens.CHAPTERSCREEN },
+                        onSkipNextButtonClick = { pagerState.requestScrollToPage(pagerState.currentPage + 1) },
+                        onSkipPreviousButtonClick = { pagerState.requestScrollToPage(pagerState.currentPage - 1) },
+                        canSkipToNext = pagerState.currentPage < (flipCardList.size - 1),
+                        canSkipToPrev = pagerState.currentPage > 0,
+                        animatedVisibilityScope = this@AnimatedContent,
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        onExpandClick = { screen = Screens.EXPANDEDSCREEN }
+                    )
+                }
+
+                Screens.EXPANDEDSCREEN -> {
+                    ExpandedFlipCardScreen(
+                        flipCard = flipCardList[pagerState.currentPage],
+                        onCrossButtonClick = { screen = Screens.PLAYSCREEN },
+                        animatedVisibilityScope = this@AnimatedContent,
+                        sharedTransitionScope = this@SharedTransitionLayout
+                    )
+                }
             }
         }
     }
@@ -227,7 +247,8 @@ fun ChapterFlipCardsScreenUI(
                                     rememberSharedContentState(key = flipCardList[page].cardId),
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
-                                .clickable { onCardClick() }
+                                .clickable { onCardClick() },
+                            onTextOverflow = {}
                         )
                     }
                 }
@@ -270,6 +291,7 @@ fun ChapterFlipCardsScreenUI(
         }
     }
 }
+
 
 //@Preview
 //@Composable

@@ -55,12 +55,16 @@ fun FlipCardPlayScreenUI(
     canSkipToNext: Boolean,
     canSkipToPrev: Boolean,
     animatedVisibilityScope: AnimatedContentScope,
-    sharedTransitionScope: SharedTransitionScope
+    sharedTransitionScope: SharedTransitionScope,
+    onExpandClick: () -> Unit
 ) {
     var isFront by rememberSaveable {
         mutableStateOf(true)
     }
     var isBlurred by rememberSaveable {
+        mutableStateOf(false)
+    }
+    var isTextOverflow by rememberSaveable {
         mutableStateOf(false)
     }
     val rotationValue by animateFloatAsState(
@@ -99,6 +103,17 @@ fun FlipCardPlayScreenUI(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            if (!isFront && isTextOverflow) IconButton(
+                onClick = onExpandClick, modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(end = 8.dp)
+            ) {
+                Icon(
+                    painterResource(R.drawable.fullscreen_portrait),
+                    tint = Color.White,
+                    contentDescription = "Expanded View"
+                )
+            }
             if (isFront && (canSkipToNext || canSkipToPrev)) {
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -151,7 +166,8 @@ fun FlipCardPlayScreenUI(
                         .sharedElement(
                             rememberSharedContentState(key = flipCard.cardId),
                             animatedVisibilityScope = animatedVisibilityScope
-                        )
+                        ),
+                    onTextOverflow = { isOverflow -> isTextOverflow = isOverflow }
                 )
             }
             if (isFront && !isBlurred) {

@@ -229,7 +229,10 @@ fun MainAppScreenUI(
 
     BackHandler(enabled = selectableState) {
         selectableState = false
-        selectAll(false) { numberOfSelection = updateSelectionNumber() }
+        selectAll(false) {
+            numberOfSelection = updateSelectionNumber()
+            updateNumberOfSubjectSelected()
+        }
     }
 
     Scaffold(
@@ -368,7 +371,7 @@ fun MainAppScreenUI(
                                     }
                                 }
                             }
-                            if (isMainScreen && numberOfSelection == 1) {
+                            if (numberOfSelection == 1) {
                                 BottomNavItem(
                                     title = "Rename",
                                     icon = R.drawable.edit_square
@@ -531,6 +534,7 @@ fun MainAppScreenUI(
                                     }
                                 )
                             },
+                            onTextOverflow = {},
                         )
                         if (selectableState) {
                             Checkbox(

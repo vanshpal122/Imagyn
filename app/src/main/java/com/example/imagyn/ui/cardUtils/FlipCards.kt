@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -23,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.imagyn.R
 import com.example.imagyn.ui.theme.CardBlue
 import com.example.imagyn.ui.theme.ImagynTheme
 import com.example.imagyn.ui.theme.WhiteColor
@@ -40,7 +42,8 @@ fun ChapterCardUi(
         fontFamily = displayFontFamily,
         fontSize = 20.sp,
         lineHeight = 24.sp
-    )
+    ),
+    onTextOverflow: (Boolean) -> Unit
 ) {
     Box(
         contentAlignment = Alignment.Center,
@@ -69,6 +72,9 @@ fun ChapterCardUi(
                 style = fontStyle,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
+                onTextLayout = { textLayoutResult ->
+                    onTextOverflow(textLayoutResult.hasVisualOverflow)
+                }
             )
         }
     }
@@ -82,6 +88,7 @@ fun SubjectCardUi(
     Box(contentAlignment = Alignment.Center, modifier = modifier.wrapContentSize()) {
         ChapterCardUi(
             content = content,
+            onTextOverflow = {},
         )
         Row(modifier = Modifier.align(Alignment.TopEnd)) {
             Card(
@@ -106,7 +113,8 @@ fun SubjectCardUi(
 fun FlipCardUi(
     content: String,
     cardColorValue: Long,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onTextOverflow: (Boolean) -> Unit
 ) {
     ChapterCardUi(
         content = content,
@@ -115,7 +123,26 @@ fun FlipCardUi(
         textColorValue = 0xFF000000,
         cardWidth = 236.dp,
         cardHeight = 340.dp,
-        fontStyle = TextStyle(fontFamily = displayFontFamily, fontSize = 28.sp, lineHeight = 32.sp)
+        fontStyle = TextStyle(fontFamily = displayFontFamily, fontSize = 28.sp, lineHeight = 32.sp),
+        onTextOverflow = { isOverflow -> onTextOverflow(isOverflow) }
+    )
+}
+
+@Composable
+fun FlipCardExpanded(
+    content: String,
+    cardColorValue: Long,
+    modifier: Modifier = Modifier
+) {
+    ChapterCardUi(
+        content = content,
+        modifier = modifier,
+        cardColorValue = cardColorValue,
+        textColorValue = 0xFF000000,
+        cardWidth = 472.dp,
+        cardHeight = 680.dp,
+        fontStyle = TextStyle(fontFamily = displayFontFamily, fontSize = 28.sp, lineHeight = 32.sp),
+        onTextOverflow = {}
     )
 }
 
@@ -132,7 +159,10 @@ fun SubjectCardUiPreview() {
 @Composable
 fun FlipCardUiPreview() {
     ImagynTheme {
-        FlipCardUi(content = "What is Operating System ?", cardColorValue = 0xFF90D24)
+        FlipCardUi(
+            content = "What is Operating System ?",
+            cardColorValue = 0xFF90D24,
+            onTextOverflow = {})
     }
 }
 
@@ -141,7 +171,19 @@ fun FlipCardUiPreview() {
 fun ChapterCardPreview() {
     ImagynTheme {
         ChapterCardUi(
-            content = "What is Operating System ?"
+            content = "What is Operating System ?",
+            onTextOverflow = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+fun ExpandedFlipCardPreview() {
+    ImagynTheme {
+        FlipCardExpanded(
+            content = stringResource(R.string.sample_para),
+            cardColorValue = 0xFF90D24
         )
     }
 }

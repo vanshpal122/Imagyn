@@ -78,7 +78,8 @@ fun CardColorSelectScreen(
                             colorValue
                         )
                     },
-                    cardColorValue = colorValue
+                    cardColorValue = colorValue,
+                    onTextOverflow = {}
                 )
             }
         }

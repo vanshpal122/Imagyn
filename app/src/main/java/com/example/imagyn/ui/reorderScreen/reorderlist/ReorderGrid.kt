@@ -123,11 +123,12 @@ private fun VerticalGrid(
                 Box() {
                     ChapterCardUi(
                         content = item.front,
-                        cardColorValue = item.colorValue,
-                        textColorValue = 0xFF000000,
                         modifier = Modifier
                             .detectReorderAfterLongPress(state)
-                            .shadow(elevation.value)
+                            .shadow(elevation.value),
+                        cardColorValue = item.colorValue,
+                        textColorValue = 0xFF000000,
+                        onTextOverflow = {}
                     )
                     if (!isDragging) Text(
                         text = "${index + 1}.",

@@ -153,7 +153,8 @@ fun AddEditFlipCardScreen(
                             .graphicsLayer {
                                 this.rotationY = rotationValue
                             }
-                            .padding(start = 16.dp, end = 16.dp)
+                            .padding(start = 16.dp, end = 16.dp),
+                        onTextOverflow = {}
                     )
                     if ((isFront && isFrontEditing) || (!isFront && isBackEditing)) {
                         ResizableDraggableTextField(

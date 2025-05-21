@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.imagyn.data.ImagynRepository
+import com.example.imagyn.data.database.ChapterData
 import com.example.imagyn.data.database.SubjectData
 import com.example.imagyn.ui.homescreen.ChapterHomeItem
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
     val chapterFlow = _chapterFlow.asStateFlow()
 
     var currentSubject by mutableStateOf("")
+    var currentFocusedChapter: ChapterData? = null
 
     fun getChapterFlow(subjectID: Int) {
         viewModelScope.launch {
@@ -48,7 +50,9 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
         var count = 0
         chapterFlow.value.forEach {
             if (it.isSelected) count++
+            if (count == 1) currentFocusedChapter = it.chapter
         }
+        if (count != 1) currentFocusedChapter = null
         return count
     }
 
