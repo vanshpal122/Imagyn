@@ -16,7 +16,7 @@ class AddFlipCardScreenViewModel(private val imagynRepository: ImagynRepository)
         viewModelScope.launch {
             try {
                 if (flipCard.chapterID == null) {
-                    val chapterID = imagynRepository.insertChapter(ChapterData(chapter = chapterName, subjectID = null)).toInt()
+                    val chapterID = imagynRepository.insertChapter(ChapterData(chapter = chapterName, subjectID = flipCard.subjectID)).toInt()
                     imagynRepository.insertCard(flipCard.copy(chapterID = chapterID))
                 } else {
                     imagynRepository.updatePrioritiesBeforeAdd(flipCard.chapterID, flipCard.priority)
