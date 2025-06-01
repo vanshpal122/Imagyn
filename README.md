@@ -1,5 +1,5 @@
 
-# Imagyn
+# Imagyn Android App
 
 The app allows users to create, edit, and review flashcards—perfect for students aiming to reinforce key concepts quickly and effectively.
 
@@ -11,9 +11,9 @@ The app allows users to create, edit, and review flashcards—perfect for studen
 
  ➡️ Group chapters into Subjects for structured, focused learning
 
- [⬇️ Download APK](https://drive.google.com/file/d/1dvISireQVkhckG8X1x59xTivT94Yx1lB/view?usp=sharing)
 
-
+## Download APK
+[⬇️ Download APK](https://drive.google.com/file/d/1dvISireQVkhckG8X1x59xTivT94Yx1lB/view?usp=sharing)
 
 ## Screenshots
 
@@ -24,6 +24,12 @@ The app allows users to create, edit, and review flashcards—perfect for studen
  <img src="https://github.com/vanshpal122/Imagyn/blob/main/readmeAssests/cardsScreen.jpg" width="30%" />
 </p>
 
+## Tech Used
+- The Screens and UI elements are built entirely using Jetpack Compose.
+
+- Room persistence library for smooth database access
+
+- Compose Navigation Library for smooth navigation between screens
 
 
 ## Demo
