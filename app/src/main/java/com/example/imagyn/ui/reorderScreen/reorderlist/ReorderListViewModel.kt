@@ -22,6 +22,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.imagyn.data.ImagynRepository
 import com.example.imagyn.data.database.FlipCard
+import com.example.imagyn.ui.ReorderDestination
 import com.example.imagyn.ui.reorderScreen.reorderable.ItemPosition
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -29,8 +30,11 @@ import kotlinx.coroutines.launch
 class ReorderListViewModel(private val imagynRepository: ImagynRepository) : ViewModel() {
     var cards by mutableStateOf(emptyList<FlipCard>())
 
-    suspend fun getFlipCards(chapterId: Int) = imagynRepository.getCardsOfChapter(chapterId).first()
-
+    init {
+        viewModelScope.launch {
+            cards = imagynRepository.getCardsOfChapter(ReorderDestination.chapterID).first()
+        }
+    }
 
     fun moveCard(from: ItemPosition, to: ItemPosition) {
         cards = cards.toMutableList().apply {
@@ -45,6 +49,7 @@ class ReorderListViewModel(private val imagynRepository: ImagynRepository) : Vie
             }
         }
     }
+
     fun isCardDragEnabled() =
         true
 }

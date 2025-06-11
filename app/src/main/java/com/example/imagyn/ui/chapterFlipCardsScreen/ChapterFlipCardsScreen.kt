@@ -6,11 +6,12 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -45,6 +46,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.imagyn.data.database.FlipCard
@@ -52,13 +56,11 @@ import com.example.imagyn.ui.AppViewModelProvider
 import com.example.imagyn.ui.cardUtils.FlipCardUi
 import kotlinx.coroutines.launch
 
-
 enum class Screens { PLAYSCREEN, CHAPTERSCREEN, EXPANDEDSCREEN }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ChapterFlipCardsScreen(
-    chapterID: Int,
     onEditClick: (Int) -> Unit,
     onBackButtonClick: () -> Unit,
     onAddNewButtonClick: (Int) -> Unit,
@@ -66,15 +68,15 @@ fun ChapterFlipCardsScreen(
     chapterFlipCardViewModel: ChapterFlipCardViewModel = viewModel(factory = AppViewModelProvider.Factory),
     onReorderButtonClick: () -> Unit
 ) {
-    val flipCardList by chapterFlipCardViewModel.getFlipCards(chapterID).collectAsState()
-    var screen by remember {
-        mutableStateOf(Screens.CHAPTERSCREEN)
-    }
+    val flipCardList by chapterFlipCardViewModel.flipCards.collectAsState()
     val pagerState = rememberPagerState {
-        flipCardList.size + 1
+        flipCardList.size
     }
     SharedTransitionLayout {
-        AnimatedContent(targetState = screen, label = "flipCardPlay") { targetState ->
+        AnimatedContent(
+            targetState = chapterFlipCardViewModel.screen,
+            label = "flipCardPlay"
+        ) { targetState ->
             when (targetState) {
                 Screens.CHAPTERSCREEN -> {
                     ChapterFlipCardsScreenUI(
@@ -97,8 +99,7 @@ fun ChapterFlipCardsScreen(
                         animatedVisibilityScope = this@AnimatedContent,
                         sharedTransitionScope = this@SharedTransitionLayout,
                         onCardClick = {
-                            if (pagerState.currentPage != flipCardList.size) screen =
-                                Screens.PLAYSCREEN
+                            chapterFlipCardViewModel.switchScreen(Screens.PLAYSCREEN)
                         }
                     )
                 }
@@ -106,21 +107,21 @@ fun ChapterFlipCardsScreen(
                 Screens.PLAYSCREEN -> {
                     FlipCardPlayScreenUI(
                         flipCard = flipCardList[pagerState.currentPage],
-                        onCrossButtonClick = { screen = Screens.CHAPTERSCREEN },
+                        onCrossButtonClick = { chapterFlipCardViewModel.switchScreen(Screens.CHAPTERSCREEN) },
                         onSkipNextButtonClick = { pagerState.requestScrollToPage(pagerState.currentPage + 1) },
                         onSkipPreviousButtonClick = { pagerState.requestScrollToPage(pagerState.currentPage - 1) },
                         canSkipToNext = pagerState.currentPage < (flipCardList.size - 1),
                         canSkipToPrev = pagerState.currentPage > 0,
                         animatedVisibilityScope = this@AnimatedContent,
                         sharedTransitionScope = this@SharedTransitionLayout,
-                        onExpandClick = { screen = Screens.EXPANDEDSCREEN }
+                        onExpandClick = { chapterFlipCardViewModel.switchScreen(Screens.EXPANDEDSCREEN) }
                     )
                 }
 
                 Screens.EXPANDEDSCREEN -> {
                     ExpandedFlipCardScreen(
                         flipCard = flipCardList[pagerState.currentPage],
-                        onCrossButtonClick = { screen = Screens.PLAYSCREEN },
+                        onCrossButtonClick = { chapterFlipCardViewModel.switchScreen(Screens.PLAYSCREEN) },
                         animatedVisibilityScope = this@AnimatedContent,
                         sharedTransitionScope = this@SharedTransitionLayout
                     )
@@ -226,15 +227,27 @@ fun ChapterFlipCardsScreenUI(
         },
         containerColor = Color(0xFF152022)
     ) { innerPadding ->
+        val density = LocalDensity.current
+        var offset by remember {
+            mutableStateOf(DpOffset.Zero)
+        }
         Box(
             contentAlignment = Alignment.Center, modifier = Modifier
-                .fillMaxHeight()
+                .fillMaxSize()
                 .padding(innerPadding)
         ) {
             HorizontalPager(
                 state = pagerState,
-                pageSize = PageSize.Fixed(256.dp),
-                beyondViewportPageCount = 1,
+                pageSize = PageSize.Fill,
+                snapPosition = SnapPosition.Center,
+                beyondViewportPageCount = 2,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onSizeChanged {
+                        with(density) {
+                            offset = DpOffset(it.width.toDp(), it.height.toDp())
+                        }
+                    }
             ) { page ->
                 if (page < flipCardList.size) {
                     with(sharedTransitionScope) {
@@ -242,7 +255,7 @@ fun ChapterFlipCardsScreenUI(
                             content = flipCardList[page].front,
                             cardColorValue = flipCardList[page].colorValue,
                             modifier = Modifier
-                                .offset(x = 64.dp)
+                                .offset(offset.x / 2 - 118.dp, offset.y / 56)
                                 .sharedElement(
                                     rememberSharedContentState(key = flipCardList[page].cardId),
                                     animatedVisibilityScope = animatedVisibilityScope

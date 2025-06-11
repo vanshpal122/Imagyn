@@ -8,28 +8,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.imagyn.data.database.FlipCard
+import com.example.imagyn.ui.AddCardScreenDestination
 import com.example.imagyn.ui.AppViewModelProvider
 
 @Composable
 fun AddFlipCardScreen(
-    colorValue: Long,
     modifier: Modifier = Modifier,
     addFlipCardScreenViewModel: AddFlipCardScreenViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    priority: Int,
-    chapterId: Int?,
-    subjectId: Int?,
-    chapterName: String,
     onNavigate: () -> Unit
 ) {
     var card by remember {
         mutableStateOf(
             FlipCard(
-                chapterID = chapterId,
-                subjectID = subjectId,
+                chapterID = AddCardScreenDestination.chapterID,
+                subjectID = AddCardScreenDestination.subjectID,
                 front = "",
                 back = "",
-                priority = priority,
-                colorValue = colorValue
+                priority = AddCardScreenDestination.priority,
+                colorValue = AddCardScreenDestination.colorValue
             )
         )
     }
@@ -37,12 +33,12 @@ fun AddFlipCardScreen(
     AddEditFlipCardScreen(
         onSaveButtonClick = { front, back ->
             addFlipCardScreenViewModel.onSaveButtonClick(
-                card.copy(front = front, back = back), chapterName
+                card.copy(front = front, back = back), AddCardScreenDestination.chapterName
             )
             onNavigate()
         },
         onCancelButtonClick = onNavigate,
-        colorValue = colorValue,
+        colorValue = AddCardScreenDestination.colorValue,
         frontText = card.front,
         backText = card.back,
         changeFrontText = { card = card.copy(front = it) },

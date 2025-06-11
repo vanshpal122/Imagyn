@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -103,17 +102,6 @@ fun FlipCardPlayScreenUI(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            if (!isFront && isTextOverflow) IconButton(
-                onClick = onExpandClick, modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(end = 8.dp)
-            ) {
-                Icon(
-                    painterResource(R.drawable.fullscreen_portrait),
-                    tint = Color.White,
-                    contentDescription = "Expanded View"
-                )
-            }
             if (isFront && (canSkipToNext || canSkipToPrev)) {
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -144,11 +132,20 @@ fun FlipCardPlayScreenUI(
                     }
                 }
             } else {
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                )
+                if (!isFront && isTextOverflow) IconButton(
+                    onClick = onExpandClick, modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(end = 8.dp)
+                ) {
+                    Icon(
+                        painterResource(R.drawable.fullscreen_portrait),
+                        tint = Color.White,
+                        contentDescription = "Expanded View"
+                    )
+                }
+                else {
+                    Spacer(Modifier.padding(8.dp))
+                }
             }
             with(sharedTransitionScope) {
                 FlipCardUi(

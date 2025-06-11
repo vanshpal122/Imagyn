@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.imagyn.data.ImagynRepository
 import com.example.imagyn.data.database.ChapterData
 import com.example.imagyn.data.database.SubjectData
+import com.example.imagyn.ui.SubjectChapterScreenDestination
 import com.example.imagyn.ui.homescreen.ChapterHomeItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +23,7 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
     var currentSubject by mutableStateOf("")
     var currentFocusedChapter: ChapterData? = null
 
-    fun getChapterFlow(subjectID: Int) {
+    private fun getChapterFlow(subjectID: Int) {
         viewModelScope.launch {
             try {
                 imagynRepository.getChaptersOfSubject(subjectID)
@@ -38,13 +39,22 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
         }
     }
 
-    suspend fun getSubjectName(subjectID: Int) {
-        try {
-            currentSubject = imagynRepository.getSubjectName(subjectID).subject.toString()
-        } catch (e: Exception) {
-            Log.e("SUBJECT", "${e.message} from getSubjectName function")
+    private fun getSubjectName(subjectID: Int) {
+        viewModelScope.launch {
+            try {
+                currentSubject = imagynRepository.getSubjectName(subjectID).subject.toString()
+            } catch (e: Exception) {
+                Log.e("SUBJECT", "${e.message} from getSubjectName function")
+            }
         }
     }
+
+
+    init {
+        getChapterFlow(SubjectChapterScreenDestination.subjectID)
+        getSubjectName(SubjectChapterScreenDestination.subjectID)
+    }
+
 
     fun updateNumberOfSelection(): Int {
         var count = 0
@@ -71,7 +81,6 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
     }
 
     fun deleteSelectedChapters(
-        subjectID: Int,
         subjectName: String,
         onSubjectDelete: () -> Unit,
         numberOfSelection: Int,
@@ -82,7 +91,7 @@ class SubjectChaptersScreenViewModel(private val imagynRepository: ImagynReposit
                 if (numberOfSelection == chapterFlow.value.size) {
                     imagynRepository.deleteSubject(
                         SubjectData(
-                            subjectID, subjectName
+                            SubjectChapterScreenDestination.subjectID, subjectName
                         )
                     )
                     onSubjectDelete()

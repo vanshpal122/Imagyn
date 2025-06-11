@@ -33,7 +33,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -52,13 +51,9 @@ import com.example.imagyn.ui.reorderScreen.reorderable.reorderable
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReorderGrid(
-    chapterId: Int,
     onNavigate: () -> Unit,
     vm: ReorderListViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    LaunchedEffect(chapterId) {
-        vm.cards = vm.getFlipCards(chapterId)
-    }
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(

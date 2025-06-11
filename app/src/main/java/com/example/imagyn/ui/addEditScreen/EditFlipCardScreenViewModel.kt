@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.imagyn.data.ImagynRepository
 import com.example.imagyn.data.database.FlipCard
+import com.example.imagyn.ui.EditScreenDestination
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -25,14 +26,19 @@ class EditFlipCardScreenViewModel(private val imagynRepository: ImagynRepository
         )
     )
 
-    fun getCardWithId(keyCard: Int) {
+    private fun getCard() {
         viewModelScope.launch {
             try {
-                card = imagynRepository.getCardWithID(keyCard).filterNotNull().first()
+                card = imagynRepository.getCardWithID(EditScreenDestination.cardKey).filterNotNull()
+                    .first()
             } catch (e: Exception) {
                 Log.e("CARD", "ErrorGetting Card")
             }
         }
+    }
+
+    init {
+        getCard()
     }
 
     fun saveFlipCard(flipCard: FlipCard) {

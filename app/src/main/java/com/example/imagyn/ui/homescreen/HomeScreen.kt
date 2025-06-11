@@ -732,7 +732,7 @@ fun MainAppScreenUI(
                         .width(200.dp)
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.Bottom,
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(

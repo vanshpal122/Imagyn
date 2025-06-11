@@ -15,6 +15,7 @@
  */
 package com.example.imagyn.ui.reorderScreen.reorderable
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.ui.Modifier
@@ -27,6 +28,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.util.fastFirstOrNull
 
+@SuppressLint("ReturnFromAwaitPointerEventScope")
 fun Modifier.reorderable(
     state: ReorderableState<*>
 ) = then(
