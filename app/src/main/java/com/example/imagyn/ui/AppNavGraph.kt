@@ -180,9 +180,14 @@ fun ImagynNavHost(navController: NavHostController, modifier: Modifier = Modifie
             AddFlipCardScreen(
                 modifier = modifier,
                 onNavigate = {
-                    if (arguments.isNewChapterRoute) navController.popBackStack(
-                        HomeScreen, false
-                    ) else if (arguments.chapterID != null) {
+                    if (arguments.isNewChapterRoute) {
+                        if(arguments.subjectID == null) navController.popBackStack(HomeScreen, false)
+                        else {
+                            SubjectChapterScreenDestination.set(subjectID = arguments.subjectID!!)
+                            navController.popBackStack(SubjectChapterScreenDestination, false)
+                        }
+                    }
+                    else if (arguments.chapterID != null) {
                         ChapterFlipCardScreenDestination.set(
                             arguments.chapterID!!,
                             arguments.subjectID

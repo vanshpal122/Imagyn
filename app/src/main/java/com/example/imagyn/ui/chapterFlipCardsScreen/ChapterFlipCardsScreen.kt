@@ -54,6 +54,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.imagyn.data.database.FlipCard
 import com.example.imagyn.ui.AppViewModelProvider
 import com.example.imagyn.ui.cardUtils.FlipCardUi
+import com.example.imagyn.ui.homescreen.CustomiseAlertDialogBox
 import kotlinx.coroutines.launch
 
 enum class Screens { PLAYSCREEN, CHAPTERSCREEN, EXPANDEDSCREEN }
@@ -149,6 +150,11 @@ fun ChapterFlipCardsScreenUI(
     var isDropDown by rememberSaveable {
         mutableStateOf(false)
     }
+
+    var isDeleteAlertBoxShown by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     val coroutineScope = rememberCoroutineScope()
     Scaffold(
         topBar = {
@@ -194,10 +200,7 @@ fun ChapterFlipCardsScreenUI(
                                     style = MaterialTheme.typography.labelLarge
                                 )
                             }, onClick = {
-                                onDeleteClick(
-                                    flipCardList[pagerState.currentPage],
-                                    (flipCardList.size == 1)
-                                )
+                                isDeleteAlertBoxShown = true
                                 isDropDown = !isDropDown
                             })
                             if (flipCardList.size > 1) {
@@ -217,8 +220,10 @@ fun ChapterFlipCardsScreenUI(
                                     style = MaterialTheme.typography.labelLarge
                                 )
                             }, onClick = {
-                                onAddNewButtonClick(pagerState.currentPage + 1)
+                                var priority = pagerState.currentPage + 1
+                                if(pagerState.currentPage + 1 == pagerState.pageCount) priority = pagerState.currentPage + 2
                                 isDropDown = !isDropDown
+                                onAddNewButtonClick(priority)
                             })
                         }
                     }
@@ -301,6 +306,26 @@ fun ChapterFlipCardsScreenUI(
                 }
                 else Spacer(modifier = Modifier.width(2.dp))
             }
+        }
+        if (isDeleteAlertBoxShown) {
+            CustomiseAlertDialogBox(
+                title = "Delete Card",
+                confirmTitle = "Delete",
+                text = {
+                    Text(text = "Are you sure you want to delete this card ?")
+                },
+                dismissAlertBox = {
+                    isDeleteAlertBoxShown = false
+                },
+                onConfirmButtonClick = {
+                    isDeleteAlertBoxShown = false
+                    onDeleteClick(
+                        flipCardList[pagerState.currentPage],
+                        (flipCardList.size == 1)
+                    )
+                },
+                isConfirmButtonEnabled = true
+            )
         }
     }
 }

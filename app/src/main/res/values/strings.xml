@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">Imagyn</string>
     <string name="sample_para">An operating system (OS) is system software that manages computer hardware and software resources and provides essential services for computer programs. It acts as an intermediary between users and the computer hardware, enabling tasks like running applications, managing files, and handling input/output operations. Common examples include Windows, macOS, Linux, and Android. The OS ensures that different programs and users running on a computer do not interfere with each other, making it crucial for efficient and secure system operation.</string>
+    <string name="deleting_subject_state">Deleting a subject will also delete all its chapters and the cards within them.</string>
+    <string name="delete_chapter_state">Deleting a Chapter will also delete all the cards within them.</string>
+    <string name="delete_sub_ch_state">Deleting Subject and Chapter will also delete all the cards within them.</string>
+    <string name="delete_sub_title">Delete Subject(s)</string>
+    <string name="delete_sub_ch_title">Delete Subject and Chapter</string>
+    <string name="delete_ch_title">Delete Chapter(s)</string>
 </resources>

@@ -60,6 +60,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -211,6 +212,10 @@ fun MainAppScreenUI(
         mutableStateOf(false)
     }
 
+    var isDeleteAlertBoxShown by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     var numberOfSelection by rememberSaveable {
         mutableIntStateOf(0)
     }
@@ -318,13 +323,7 @@ fun MainAppScreenUI(
                     navigationIcon = {
                         TextButton(
                             onClick = {
-                                deleteSelectedSubjectsAndChapters(numberOfSelection) {
-                                    selectAll(false) {
-                                        numberOfSelection = updateSelectionNumber()
-                                        updateNumberOfSubjectSelected()
-                                    }
-                                }
-                                selectableState = false
+                                isDeleteAlertBoxShown = true
                             },
                             enabled = numberOfSelection > 0
                         ) {
@@ -672,6 +671,41 @@ fun MainAppScreenUI(
                         isSubjectAlertBoxShown = false
                         selectableState = false
                     }
+                )
+            }
+            if (isDeleteAlertBoxShown) {
+                CustomiseAlertDialogBox(
+                    title =
+                        if (numberOfSelection == numberOfSubjectSelected) stringResource(R.string.delete_sub_title)
+                        else if (numberOfSubjectSelected == 0) stringResource(R.string.delete_ch_title)
+                        else stringResource(R.string.delete_sub_ch_title),
+                    confirmTitle = "Delete",
+                    text = {
+                        Text(
+                            text =
+                                if (numberOfSelection == numberOfSubjectSelected) stringResource(R.string.deleting_subject_state)
+                                else if (numberOfSubjectSelected == 0) stringResource(R.string.delete_chapter_state)
+                                else stringResource(R.string.delete_sub_ch_state)
+                        )
+                    },
+                    dismissAlertBox = {
+                        isDeleteAlertBoxShown = false
+                        selectableState = false
+                        selectAll(false) {
+                            numberOfSelection = updateSelectionNumber()
+                        }
+                    },
+                    onConfirmButtonClick = {
+                        isDeleteAlertBoxShown = false
+                        deleteSelectedSubjectsAndChapters(numberOfSelection) {
+                            selectAll(false) {
+                                numberOfSelection = updateSelectionNumber()
+                                updateNumberOfSubjectSelected()
+                            }
+                        }
+                        selectableState = false
+                    },
+                    isConfirmButtonEnabled = true
                 )
             }
             if (isRenameChapterAlertBoxShown) {
