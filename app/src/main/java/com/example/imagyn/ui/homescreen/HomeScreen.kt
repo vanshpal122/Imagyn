@@ -693,6 +693,7 @@ fun MainAppScreenUI(
                         selectableState = false
                         selectAll(false) {
                             numberOfSelection = updateSelectionNumber()
+                            updateNumberOfSubjectSelected()
                         }
                     },
                     onConfirmButtonClick = {
