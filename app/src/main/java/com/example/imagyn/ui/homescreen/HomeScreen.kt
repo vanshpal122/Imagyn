@@ -53,7 +53,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
@@ -429,22 +430,6 @@ fun MainAppScreenUI(
                 columns = GridCells.Adaptive(148.dp),
                 verticalArrangement = Arrangement.spacedBy(48.dp),
                 modifier = Modifier
-                    .then(
-                        if (!selectableState) Modifier.drawWithContent {
-                            drawContent()
-                            withTransform({
-                                translate(top = size.height / 2)
-                                scale(1.0f, 0.13f)
-                            }) {
-                                drawArc(
-                                    color = Color.Gray,
-                                    startAngle = 180f,
-                                    sweepAngle = 180f,
-                                    useCenter = false
-                                )
-                            }
-                        } else Modifier
-                    )
                     .fillMaxSize()
             ) {
                 itemsIndexed(
@@ -760,15 +745,30 @@ fun MainAppScreenUI(
                 )
             }
             if (!selectableState) {
-                IconButton(
-                    onClick = { isChapterAlertBoxShown = true },
+                Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .width(200.dp)
+                        .fillMaxWidth()
+                        .drawBehind {
+                            withTransform(
+                                { translate(0f, size.height) }
+                            ) {
+                                drawArc(
+                                    color = Color.Gray,
+                                    topLeft = Offset(0f, -size.height),
+                                    startAngle = 0f,
+                                    sweepAngle = -180f,
+                                    useCenter = true
+                                )
+                            }
+                        }
                 ) {
                     Row(
                         verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.Center
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(4.dp).clickable {
+                            isChapterAlertBoxShown = true
+                        }.align(Alignment.Center)
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.add_chapter_icon),
