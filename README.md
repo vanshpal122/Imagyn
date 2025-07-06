@@ -13,7 +13,7 @@ The app allows users to create, edit, and review flashcards—perfect for studen
 
 
 ## Download APK
-[⬇️ Download APK](https://drive.google.com/file/d/1pzalP1PBMuy0Zxa_1TyE7xktxuBqpIjt/view?usp=sharing)
+[⬇️ Download APK](https://drive.google.com/file/d/1mEeQmi8Ho_MS6DkpCjIh6IBk_mFcmPmC/view?usp=sharing)
 
 ## Screenshots
 
