@@ -6,8 +6,7 @@
 .gradle
 .kotlin
 .idea
-/app/release
-/app/release/debug
+app/release
 generated/
 /local.properties
 .DS_Store
